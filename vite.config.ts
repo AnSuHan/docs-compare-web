@@ -1,6 +1,8 @@
 import { defineConfig, type PluginOption } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 
 /** 이 앱이 붙는 경로. 도메인의 이 아래에 마운트된다. */
@@ -25,6 +27,50 @@ const tolerateMountPrefix: PluginOption = {
   },
 };
 
+/** 디렉터리에서 가장 최근에 손댄 시각. */
+function newestMtime(dir: string): number {
+  let newest = 0;
+  if (!existsSync(dir)) return newest;
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    const st = statSync(p);
+    const t = st.isDirectory() ? newestMtime(p) : st.mtimeMs;
+    if (t > newest) newest = t;
+  }
+  return newest;
+}
+
+/**
+ * preview 를 띄울 때 dist 가 소스보다 낡았으면 다시 빌드한다.
+ *
+ * 배포 플랫폼은 이 앱을 `vite preview` 로 띄우고, 소스만 갱신됐을 때
+ * 다시 빌드해 주지 않는다. 그러면 재시작해도 옛 화면이 계속 나온다.
+ * 여기서 한 번 확인하면 "재시작 = 지금 소스대로 서빙"이 항상 성립한다.
+ */
+const rebuildIfStale: PluginOption = {
+  name: 'rebuild-if-stale',
+  async configurePreviewServer(server) {
+    const root = server.config.root;
+    const dist = join(root, 'dist', 'index.html');
+
+    if (existsSync(dist)) {
+      const built = statSync(dist).mtimeMs;
+      const sources = Math.max(
+        newestMtime(join(root, 'src')),
+        existsSync(join(root, 'index.html')) ? statSync(join(root, 'index.html')).mtimeMs : 0,
+        existsSync(join(root, 'vite.config.ts')) ? statSync(join(root, 'vite.config.ts')).mtimeMs : 0,
+      );
+      if (sources <= built) return;
+      console.log('[rebuild-if-stale] 소스가 dist 보다 새로워 다시 빌드합니다.');
+    } else {
+      console.log('[rebuild-if-stale] dist 가 없어 빌드합니다.');
+    }
+
+    const { build } = await import('vite');
+    await build({ root, logLevel: 'info' });
+  },
+};
+
 export default defineConfig(({ command }) => ({
   /**
    * 빌드 산출물은 마운트 경로를 **절대경로**로 박고, 서빙(dev/preview)은 루트로 둔다.
@@ -39,7 +85,7 @@ export default defineConfig(({ command }) => ({
    * prefix 가 붙어 오든 떼여 오든 모두 처리된다.
    */
   base: command === 'build' ? MOUNT + '/' : '/',
-  plugins: [react(), tailwindcss(), tolerateMountPrefix],
+  plugins: [react(), tailwindcss(), tolerateMountPrefix, rebuildIfStale],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

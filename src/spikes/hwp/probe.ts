@@ -4,6 +4,16 @@ import { readFileHeader } from '@/core/parsers/hwp/fileHeader';
 import { readRecords, TAG } from '@/core/parsers/hwp/record';
 import { decodeParaText } from '@/core/parsers/hwp/paraText';
 
+/** 추출 텍스트에 남은 C0 제어문자 수. §7.8 검수 4번은 이 값이 0 이어야 통과다. */
+function countControls(s: string): number {
+  let n = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0d) n++;
+  }
+  return n;
+}
+
 export interface HwpProbeResult {
   fileName: string;
   ok: boolean;
@@ -73,8 +83,7 @@ export async function probeHwp(file: File): Promise<HwpProbeResult> {
           const r = decodeParaText(rec.payload);
           chars += r.text.length;
           unknown += r.unknown;
-          // eslint-disable-next-line no-control-regex
-          residual += (r.text.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g) ?? []).length;
+          residual += countControls(r.text);
           if (sampleParts.length < 12 && r.text.trim()) sampleParts.push(r.text.trim());
         }
       }

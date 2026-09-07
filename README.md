@@ -101,3 +101,23 @@ T-010 형식 감지 마무리 → T-011 인코딩 감지 실파서 → T-013~T-0
 
 `server/static.mjs` 는 `npm start` 용 의존성 0 정적 서버다(현재 플랫폼은 `vite preview` 를 쓰므로
 프로덕션에서 돌지는 않는다). `dist/` 만 내려주고 문서 바이트는 서버로 오지 않는다(D-01).
+
+### 배포 절차
+
+배포 통로가 파일 내용을 그대로 실어 보내는 방식이라, 전체 소스(180KB 남짓)를 매번 올리면 비싸다.
+바뀐 것만 올린다.
+
+```bash
+npm run verify        # 통과 못 하면 배포하지 않는다
+npm run deploy:plan   # 무엇이 바뀌었는지
+# → 나온 목록만 write_file 로 올린다 (새 폴더는 make_dir 먼저, 지울 건 delete_file)
+# → restart_app
+npm run deploy:record # 매니페스트 갱신
+```
+
+`vite.config.ts` 의 `rebuild-if-stale` 플러그인이 preview 시작 때 dist 가 소스보다 낡았는지 보고
+필요하면 다시 빌드한다. 그래서 **재시작 = 지금 소스대로 서빙**이 성립한다.
+플랫폼은 `vite preview` 로만 띄우고 소스가 바뀌어도 다시 빌드해 주지 않기 때문에 필요한 장치다.
+
+`deploy/manifest.json` 에 마지막으로 올린 파일들의 해시가 들어 있다. 이 파일을 지우면 전체가
+"새 파일"로 잡힌다(첫 배포와 같다).

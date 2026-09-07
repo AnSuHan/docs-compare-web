@@ -13,7 +13,9 @@
     "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false",
     "lint:no-upload": "node scripts/check-no-upload.mjs",
     "verify": "npm run lint:no-upload && npm run test && npm run build && npm run lint:bundle",
-    "lint:bundle": "node scripts/check-bundle.mjs"
+    "lint:bundle": "node scripts/check-bundle.mjs",
+    "deploy:plan": "node scripts/deploy-plan.mjs",
+    "deploy:record": "node scripts/deploy-plan.mjs --record"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.0",
