@@ -1,17 +1,14 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '@/store';
 import { FileSlot } from '@/components/upload/FileSlot';
 import { UnifiedView } from '@/components/diff/UnifiedView';
 import { WarningBanner } from '@/components/common/WarningBanner';
 import { ping } from '@/workers/client';
-
-// 스파이크 도구는 pdfjs 를 끌어온다. 절대 초기 번들에 들어가면 안 된다.
-const SpikePanel = lazy(() => import('@/spikes/SpikePanel').then((m) => ({ default: m.SpikePanel })));
+import { navigate } from './routes';
 
 export default function App() {
   const { files, mode, docs, diff, progress, error, busy, setFile, run, cancel, reset } = useApp();
   const [worker, setWorker] = useState<string>('확인 중');
-  const [showSpikes, setShowSpikes] = useState(false);
 
   // T-003 의 완료 기준: UI 에서 워커를 호출해 응답을 받는다.
   useEffect(() => {
@@ -91,19 +88,17 @@ export default function App() {
         </section>
       )}
 
-      <footer className="mt-16 border-t border-[var(--color-ink-200)] pt-6">
+      <footer className="mt-16 flex items-center gap-4 border-t border-[var(--color-ink-200)] pt-6 text-sm">
         <button
           type="button"
-          onClick={() => setShowSpikes((v) => !v)}
-          className="text-sm text-[var(--color-ink-400)] underline underline-offset-4"
+          onClick={() => navigate('/docdiff/admin')}
+          className="text-[var(--color-ink-400)] underline underline-offset-4"
         >
-          {showSpikes ? '스파이크 도구 접기' : '스파이크 도구 열기 (T-004 ~ T-006)'}
+          관리 · 진단 화면
         </button>
-        {showSpikes && (
-          <Suspense fallback={<p className="mt-4 text-sm">도구 불러오는 중…</p>}>
-            <SpikePanel />
-          </Suspense>
-        )}
+        <span className="ml-auto text-xs text-[var(--color-ink-400)]">
+          지원 형식: txt · md · docx · pdf · hwp · hwpx
+        </span>
       </footer>
     </div>
   );

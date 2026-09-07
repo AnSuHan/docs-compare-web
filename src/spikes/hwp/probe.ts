@@ -1,8 +1,8 @@
 import * as CFB from 'cfb';
 import pako from 'pako';
-import { readFileHeader } from './fileHeader';
-import { readRecords, TAG } from './record';
-import { decodeParaText } from './paraText';
+import { readFileHeader } from '@/core/parsers/hwp/fileHeader';
+import { readRecords, TAG } from '@/core/parsers/hwp/record';
+import { decodeParaText } from '@/core/parsers/hwp/paraText';
 
 export interface HwpProbeResult {
   fileName: string;

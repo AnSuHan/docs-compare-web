@@ -44,9 +44,15 @@ const api: WorkerApi = {
   },
 
   async renormalize(doc: NormalizedDoc, options: NormalizeOptions) {
-    const blocks = doc.blocks
-      .map((b, i) => ({ ...b, text: normalizeText(b.rawText, options), id: makeBlockId(b.rawText, i) }))
-      .filter((b) => b.text.length > 0);
+    // 파싱은 다시 하지 않는다. rawText 를 들고 있으므로 정규화만 다시 돌린다.
+    // id 는 §3.2 대로 "정규화된 텍스트 + 최종 순번" 으로 다시 매긴다 —
+    // 빈 블록이 걸러진 뒤의 순번이어야 파싱 때와 같은 규칙이 된다.
+    const blocks: NormalizedDoc['blocks'] = [];
+    for (const b of doc.blocks) {
+      const text = normalizeText(b.rawText, options);
+      if (!text) continue;
+      blocks.push({ ...b, text, id: makeBlockId(text, blocks.length) });
+    }
     return { ...doc, blocks };
   },
 

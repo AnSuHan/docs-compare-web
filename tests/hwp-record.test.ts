@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readRecords, TAG } from '../src/spikes/hwp/record';
-import { decodeParaText } from '../src/spikes/hwp/paraText';
+import { readRecords, TAG } from '../src/core/parsers/hwp/record';
+import { decodeParaText } from '../src/core/parsers/hwp/paraText';
 
 /** 레코드 하나를 손으로 만든다. */
 function record(tagId: number, level: number, payload: Uint8Array): Uint8Array {

@@ -1,101 +1,174 @@
 import type { Block, DiffOptions, DiffResult, DiffRow, DiffStats, NormalizedDoc } from '../types';
 import { DIFF_LIMITS } from '../limits';
+import { AppError } from '../errors';
+import { diffSequence, type SeqOp } from './sequence';
+import { pairBlocks } from './pairing';
+import { inlineDiff } from './wordDiff';
+
+export { diffSequence } from './sequence';
+export { diceCoefficient, pairBlocks } from './pairing';
+export { inlineDiff, splitWords, mergeAdjacent } from './wordDiff';
 
 /**
- * M0 골격.
- * 블록 텍스트 배열에 대한 LCS 만 구현했다. (1단계)
- * 짝짓기(2단계)와 한국어 인라인 diff(3단계)는 M1 의 T-014 / T-015 에서 붙인다.
- * 지금 중요한 것은 "같은 문서를 넣으면 변경점이 0"이 성립하는 것뿐이다.
+ * §5 — 3단계 diff.
+ *   1단계 블록 LCS          → equal / insert / delete
+ *   2단계 인접 쌍 짝짓기     → modify 로 승격
+ *   3단계 modify 의 어절 diff → inline 스팬
  */
 export function diffDocs(a: NormalizedDoc, b: NormalizedDoc, options: DiffOptions): DiffResult {
-  const started = performance.now();
+  const started = now();
   const A = a.blocks;
   const B = b.blocks;
 
-  const ops = lcsOps(A.map((x) => x.text), B.map((x) => x.text));
+  if (A.length + B.length > DIFF_LIMITS.MAX_TOTAL_BLOCKS) {
+    throw new AppError('OUT_OF_MEMORY', `blocks=${A.length + B.length}`);
+  }
+
+  const ops = diffSequence(
+    A.map((x) => x.text),
+    B.map((x) => x.text),
+  );
 
   const rows: DiffRow[] = [];
   const stats: DiffStats = {
-    insertBlocks: 0, deleteBlocks: 0, modifyBlocks: 0, equalBlocks: 0,
-    insertChars: 0, deleteChars: 0,
+    insertBlocks: 0,
+    deleteBlocks: 0,
+    modifyBlocks: 0,
+    equalBlocks: 0,
+    insertChars: 0,
+    deleteChars: 0,
   };
-
   let truncated = false;
-  for (const op of ops) {
-    if (performance.now() - started > options.timeoutMs) { truncated = true; break; }
+
+  // 연속된 delete / insert 무리를 모아서 한 번에 처리한다.
+  let i = 0;
+  while (i < ops.length) {
+    if (now() - started > options.timeoutMs) {
+      truncated = true;
+      break;
+    }
+
+    const op = ops[i]!;
     if (op.kind === 'equal') {
       rows.push({ kind: 'equal', left: A[op.ai]!, right: B[op.bi]! });
       stats.equalBlocks++;
-    } else if (op.kind === 'delete') {
-      const left: Block = A[op.ai]!;
+      i++;
+      continue;
+    }
+
+    const start = i;
+    while (i < ops.length && ops[i]!.kind !== 'equal') i++;
+    emitChangeRun(ops.slice(start, i), A, B, options, rows, stats);
+  }
+
+  const changeIndices: number[] = [];
+  rows.forEach((r, idx) => {
+    if (r.kind !== 'equal') changeIndices.push(idx);
+  });
+
+  const result: DiffResult = { rows, stats, changeIndices, options };
+  if (truncated) result.truncated = true;
+  return result;
+}
+
+/** delete 무리 + insert 무리를 짝지어 modify 로 승격한다(2·3단계). */
+function emitChangeRun(
+  run: SeqOp[],
+  A: readonly Block[],
+  B: readonly Block[],
+  options: DiffOptions,
+  rows: DiffRow[],
+  stats: DiffStats,
+): void {
+  const dels = run.filter((o): o is Extract<SeqOp, { kind: 'delete' }> => o.kind === 'delete').map((o) => o.ai);
+  const inss = run.filter((o): o is Extract<SeqOp, { kind: 'insert' }> => o.kind === 'insert').map((o) => o.bi);
+
+  const pairs = pairBlocks(
+    dels.map((ai) => A[ai]!.text),
+    inss.map((bi) => B[bi]!.text),
+  );
+
+  const pairedLeft = new Map<number, { right: number; sim: number }>();
+  const pairedRight = new Set<number>();
+  for (const p of pairs) {
+    pairedLeft.set(p.left, { right: p.right, sim: p.sim });
+    pairedRight.add(p.right);
+  }
+
+  // 왼쪽 순서를 기준으로 내보낸다. 짝이 있으면 modify, 없으면 delete.
+  let insCursor = 0;
+  for (let li = 0; li < dels.length; li++) {
+    const pair = pairedLeft.get(li);
+    if (!pair) {
+      const left = A[dels[li]!]!;
       rows.push({ kind: 'delete', left });
       stats.deleteBlocks++;
       stats.deleteChars += left.text.length;
-    } else {
-      const right: Block = B[op.bi]!;
+      continue;
+    }
+
+    // 짝지어지지 않은 채 앞서 있는 insert 들을 먼저 흘려보낸다.
+    while (insCursor < pair.right) {
+      if (!pairedRight.has(insCursor)) {
+        const right = B[inss[insCursor]!]!;
+        rows.push({ kind: 'insert', right });
+        stats.insertBlocks++;
+        stats.insertChars += right.text.length;
+      }
+      insCursor++;
+    }
+
+    const left = A[dels[li]!]!;
+    const right = B[inss[pair.right]!]!;
+    const row: DiffRow = { kind: 'modify', left, right, similarity: round2(pair.sim) };
+
+    // 너무 긴 블록은 인라인 diff 를 생략한다(§5.5).
+    if (left.text.length <= options.maxInlineLen && right.text.length <= options.maxInlineLen) {
+      row.inline = inlineDiff(left.text, right.text);
+    }
+    rows.push(row);
+
+    stats.modifyBlocks++;
+    // 바뀐 글자 수만 센다. 통째로 세면 수정이 전면 교체처럼 보인다.
+    const changed = countInlineChars(row.inline, left.text, right.text);
+    stats.deleteChars += changed.deleted;
+    stats.insertChars += changed.inserted;
+    insCursor = pair.right + 1;
+  }
+
+  while (insCursor < inss.length) {
+    if (!pairedRight.has(insCursor)) {
+      const right = B[inss[insCursor]!]!;
       rows.push({ kind: 'insert', right });
       stats.insertBlocks++;
       stats.insertChars += right.text.length;
     }
+    insCursor++;
   }
-
-  const changeIndices: number[] = [];
-  rows.forEach((r, i) => { if (r.kind !== 'equal') changeIndices.push(i); });
-
-  return { rows, stats, changeIndices, options, truncated: truncated || undefined };
 }
 
-type Op =
-  | { kind: 'equal'; ai: number; bi: number }
-  | { kind: 'delete'; ai: number }
-  | { kind: 'insert'; bi: number };
-
-/**
- * 표준 LCS DP. O(n*m) 이므로 대용량에서는 T-071 의 앵커 분할로 대체된다.
- * 여기서는 정확성 기준선 역할을 한다.
- */
-export function lcsOps(a: readonly string[], b: readonly string[]): Op[] {
-  const n = a.length;
-  const m = b.length;
-
-  if (n * m > DIFF_LIMITS.MAX_BLOCKS_FOR_MYERS * DIFF_LIMITS.MAX_BLOCKS_FOR_MYERS) {
-    throw new Error('too large for LCS; use anchorSplit (T-071)');
+function countInlineChars(
+  inline: DiffRow['inline'],
+  leftText: string,
+  rightText: string,
+): { deleted: number; inserted: number } {
+  if (!inline) return { deleted: leftText.length, inserted: rightText.length };
+  let deleted = 0;
+  let inserted = 0;
+  for (const s of inline) {
+    if (s.kind === 'delete') deleted += s.text.length;
+    else if (s.kind === 'insert') inserted += s.text.length;
   }
+  return { deleted, inserted };
+}
 
-  // 공통 접두/접미를 먼저 깎아낸다. 대부분의 실제 비교에서 이게 대부분을 처리한다.
-  let lo = 0;
-  while (lo < n && lo < m && a[lo] === b[lo]) lo++;
-  let hiA = n; let hiB = m;
-  while (hiA > lo && hiB > lo && a[hiA - 1] === b[hiB - 1]) { hiA--; hiB--; }
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
 
-  const ops: Op[] = [];
-  for (let i = 0; i < lo; i++) ops.push({ kind: 'equal', ai: i, bi: i });
-
-  const sa = a.slice(lo, hiA);
-  const sb = b.slice(lo, hiB);
-  const rows = sa.length;
-  const cols = sb.length;
-
-  const dp: Uint32Array = new Uint32Array((rows + 1) * (cols + 1));
-  const at = (i: number, j: number) => i * (cols + 1) + j;
-
-  for (let i = rows - 1; i >= 0; i--) {
-    for (let j = cols - 1; j >= 0; j--) {
-      dp[at(i, j)] = sa[i] === sb[j]
-        ? dp[at(i + 1, j + 1)]! + 1
-        : Math.max(dp[at(i + 1, j)]!, dp[at(i, j + 1)]!);
-    }
-  }
-
-  let i = 0; let j = 0;
-  while (i < rows && j < cols) {
-    if (sa[i] === sb[j]) { ops.push({ kind: 'equal', ai: lo + i, bi: lo + j }); i++; j++; }
-    else if (dp[at(i + 1, j)]! >= dp[at(i, j + 1)]!) { ops.push({ kind: 'delete', ai: lo + i }); i++; }
-    else { ops.push({ kind: 'insert', bi: lo + j }); j++; }
-  }
-  while (i < rows) { ops.push({ kind: 'delete', ai: lo + i }); i++; }
-  while (j < cols) { ops.push({ kind: 'insert', bi: lo + j }); j++; }
-
-  for (let k = 0; k < n - hiA; k++) ops.push({ kind: 'equal', ai: hiA + k, bi: hiB + k });
-  return ops;
+/** 워커·Node 어디서든 도는 시계. performance 가 없으면 Date 로 떨어진다. */
+function now(): number {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
 }
