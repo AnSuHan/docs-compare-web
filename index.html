@@ -5,6 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DocDiff — 문서 두 개를 비교합니다</title>
     <meta name="description" content="PDF, 워드, 한글 문서 두 개의 달라진 부분을 찾아 보여줍니다. 파일은 서버로 전송되지 않습니다." />
+    <script>
+      /*
+        앱이 뜨지 않을 때 백지 대신 이유를 보여준다.
+        번들이 파싱/실행 단계에서 죽으면 React 는 시작조차 못 하므로
+        여기서 잡지 않으면 사용자 화면에는 아무것도 남지 않는다.
+        ES5 로만 쓴다 — 이 스크립트가 죽으면 의미가 없다.
+      */
+      (function () {
+        var box = null;
+        function show(text) {
+          var root = document.getElementById('root');
+          if (!root) return;
+          if (!box) {
+            box = document.createElement('pre');
+            box.setAttribute('role', 'alert');
+            box.style.cssText =
+              'margin:24px;padding:16px;border-radius:8px;border:1px solid #ffc1bc;' +
+              'background:#ffebe9;color:#1b1f26;white-space:pre-wrap;word-break:break-word;' +
+              'font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+            root.appendChild(box);
+          }
+          box.textContent += text + '\n';
+        }
+        // capture 단계여야 <script>/<link> 로드 실패(404)까지 잡힌다.
+        // 이게 없으면 자산이 404 일 때 아무 이벤트도 못 보고 백지만 남는다.
+        window.addEventListener(
+          'error',
+          function (e) {
+            var el = e.target;
+            if (el && el !== window && (el.src || el.href)) {
+              show('불러오지 못했습니다: ' + (el.src || el.href));
+              return;
+            }
+            var where = e.filename ? '\n  ' + e.filename + ':' + e.lineno + ':' + e.colno : '';
+            show('오류: ' + (e.message || e.type) + where);
+          },
+          true,
+        );
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason;
+          show('처리되지 않은 거부: ' + (r && r.message ? r.message : String(r)));
+        });
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (root && root.childNodes.length === 0) {
+            show('앱이 시작되지 않았습니다.\n' + navigator.userAgent);
+          }
+        }, 4000);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

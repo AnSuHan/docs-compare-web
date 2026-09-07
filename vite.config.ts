@@ -25,19 +25,20 @@ const tolerateMountPrefix: PluginOption = {
   },
 };
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   /**
-   * 상대경로 자산. 배포에서 이게 유일하게 맞는 값이다.
+   * 빌드 산출물은 마운트 경로를 **절대경로**로 박고, 서빙(dev/preview)은 루트로 둔다.
    *
-   * 브라우저는 prefix 를 붙여 요청해야 하고(그래야 프록시가 이 앱으로 보낸다)
-   * 앱은 루트 기준으로 서빙해야 한다. './' 가 정확히 그렇다 — index.html 이
-   * `./assets/...` 를 가리키므로 브라우저는 /docdiff/assets/... 를 요청한다.
+   * 상대경로('./')로 두면 끝 슬래시 없는 주소(/docdiff)로 들어왔을 때 브라우저가
+   * `./assets/...` 를 `/assets/...` 로 풀어 루트에 붙은 다른 앱으로 새어 나간다.
+   * 제목만 뜨고 본문이 백지가 되던 증상이 정확히 이것이었다.
    *
-   * '/docdiff/' 로 박으면 프록시가 prefix 를 뗄 때 앱이 다시 /docdiff/ 로
-   * 리디렉트해 무한 루프가 된다. '/' 로 두면 브라우저가 /assets/... 를 요청해
-   * 루트에 붙은 다른 앱으로 새어 나간다.
+   * 반대로 preview 의 base 까지 '/docdiff/' 로 두면, 프록시가 prefix 를 뗀 요청에
+   * preview 가 다시 '/docdiff/' 로 리디렉트해 무한 루프가 된다.
+   * 그래서 빌드만 절대경로, 서빙은 루트 — 여기에 위 미들웨어가 붙어
+   * prefix 가 붙어 오든 떼여 오든 모두 처리된다.
    */
-  base: './',
+  base: command === 'build' ? MOUNT + '/' : '/',
   plugins: [react(), tailwindcss(), tolerateMountPrefix],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
@@ -59,4 +60,4 @@ export default defineConfig({
     // manualChunks 는 쓰지 않는다. 형식별 파서는 동적 import 로만 갈라지고,
     // 수동으로 청크를 묶으면 오히려 초기 로드에 끌려 들어온다.
   },
-});
+}));
