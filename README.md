@@ -80,8 +80,18 @@ T-010 형식 감지 마무리 → T-011 인코딩 감지 실파서 → T-013~T-0
 | `/` | php-project (기존) |
 | `/docdiff` | 이 프로젝트 |
 
-- `vite.config.ts` 의 `base: './'` — 어느 경로에 마운트해도 자산이 깨지지 않는다. 새 프로젝트도 이 값을 유지할 것.
-- `server/static.mjs` — `npm start` 가 띄우는 의존성 0 정적 서버. `dist/` 만 내려주고 문서 바이트는 서버로 오지 않는다(D-01).
-  마운트 prefix 가 붙어 오든 떼여 오든 둘 다 찾고, 자산이 아닌 경로는 `index.html` 로 떨어뜨린다.
-- **빌드 도구가 `dependencies` 에 있는 이유**: 배포 서버가 프로덕션 의존성만 설치한 뒤 `npm run build` 를 돌린다.
+접속: https://web-hosting.egghosting.com/docdiff
+
+배포하면서 부딪힌 제약 셋. 새 프로젝트를 올릴 때도 그대로 적용된다.
+
+- **마운트 경로를 앱이 알아야 한다.** 리버스 프록시가 `/docdiff` prefix 를 떼지 않고 그대로 넘긴다.
+  그래서 `vite.config.ts` 의 `base` 를 `/docdiff/` 로 둔다(개발 서버만 `/`). 이걸 `'./'` 로 두면
+  브라우저는 올바른 주소를 요청하는데 서버가 루트 기준으로 찾아 모든 자산이 index.html 로 폴백된다.
+- **`preview.allowedHosts` 가 필요하다.** 플랫폼이 이 앱을 `node/vite_static` 으로 감지해
+  `vite preview`(포트 4173)로 띄우는데, preview 는 모르는 Host 헤더를 403 으로 막는다.
+  증상은 `Blocked request. This host ... is not allowed.`
+- **빌드 도구는 `dependencies` 에 둔다.** 배포 서버가 프로덕션 의존성만 설치한 뒤 `npm run build` 를 돌린다.
   `vite`/`typescript`/`tailwindcss` 를 `devDependencies` 에 두면 `tsc: not found` 로 빌드가 실패한다.
+
+`server/static.mjs` 는 `npm start` 용 의존성 0 정적 서버다(현재 플랫폼은 `vite preview` 를 쓰므로
+프로덕션에서 돌지는 않는다). `dist/` 만 내려주고 문서 바이트는 서버로 오지 않는다(D-01).
