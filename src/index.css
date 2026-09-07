@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/*
+  디자인 방향 (M0)
+  - 대상: 계약서·공문서를 검토하는 사람. 화면에서 "무엇이 바뀌었나"만 빠르게 읽어야 한다.
+  - 그래서 색은 diff 에만 쓴다. 그 외 UI 는 전부 무채색으로 물러난다.
+  - 종이 흉내(크림색 + 세리프)를 쓰지 않는다. 문서를 보는 도구지 문서가 아니다.
+  - 강조는 한 곳: 파일을 놓는 두 칸. 이 제품의 유일한 동작이다.
+*/
+@theme {
+  --color-ink-50:  #f6f7f8;
+  --color-ink-100: #eceef1;
+  --color-ink-200: #d8dce2;
+  --color-ink-400: #8b939f;
+  --color-ink-600: #4a515c;
+  --color-ink-900: #1b1f26;
+
+  --color-accent: #2f5fd0;
+
+  --color-add-bg:     #e6ffec;
+  --color-add-strong: #abf2bc;
+  --color-del-bg:     #ffebe9;
+  --color-del-strong: #ffc1bc;
+
+  --font-sans: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI",
+               "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-ink-50:  #14171c;
+    --color-ink-100: #1b1f26;
+    --color-ink-200: #2a2f38;
+    --color-ink-400: #7b838f;
+    --color-ink-600: #b6bcc5;
+    --color-ink-900: #eef0f3;
+
+    --color-add-bg:     #0d4429;
+    --color-add-strong: #1a7f37;
+    --color-del-bg:     #5a1e1e;
+    --color-del-strong: #b62324;
+  }
+}
+
+html { color-scheme: light dark; }
+
+body {
+  margin: 0;
+  background: var(--color-ink-50);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
