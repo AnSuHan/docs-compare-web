@@ -73,20 +73,24 @@ T-010 형식 감지 마무리 → T-011 인코딩 감지 실파서 → T-013~T-0
 
 ## 배포 (에그호스팅)
 
-`web-hosting` 서비스에 앱으로 올라간다. 여러 프로젝트를 한 서비스에 두므로 경로 라우팅을 쓴다.
+`web-hosting` 서비스에 앱으로 올라간다. 한 서비스에 프로젝트를 여러 개 두고 경로로 가른다.
 
 | 경로 | 앱 |
 |---|---|
-| `/` | php-project (기존) |
+| `/` | landing (프로젝트 목록) |
 | `/docdiff` | 이 프로젝트 |
+| `/php` | php-project |
 
 접속: https://web-hosting.egghosting.com/docdiff
 
 배포하면서 부딪힌 제약 셋. 새 프로젝트를 올릴 때도 그대로 적용된다.
 
-- **마운트 경로를 앱이 알아야 한다.** 리버스 프록시가 `/docdiff` prefix 를 떼지 않고 그대로 넘긴다.
-  그래서 `vite.config.ts` 의 `base` 를 `/docdiff/` 로 둔다(개발 서버만 `/`). 이걸 `'./'` 로 두면
-  브라우저는 올바른 주소를 요청하는데 서버가 루트 기준으로 찾아 모든 자산이 index.html 로 폴백된다.
+- **`base` 는 `'./'` 여야 한다.** 프록시가 `/docdiff` prefix 를 떼고 앱에 넘긴다.
+  즉 브라우저는 prefix 를 붙여 요청해야 하고(그래야 프록시가 이 앱으로 보낸다) 앱은 루트 기준으로 서빙해야 한다.
+  `'/docdiff/'` 로 박으면 앱이 다시 `/docdiff/` 로 리디렉트하고 프록시가 또 떼면서 **무한 리디렉트**가 된다.
+  `'/'` 로 두면 브라우저가 `/assets/...` 를 요청해 루트에 붙은 다른 앱으로 새어 나간다.
+  단, nginx 는 라우팅을 막 저장한 직후에는 prefix 를 떼지 않다가 재동기화 뒤에 떼기 시작했다.
+  그래서 `vite.config.ts` 의 `tolerate-mount-prefix` 플러그인이 양쪽을 다 받아준다.
 - **`preview.allowedHosts` 가 필요하다.** 플랫폼이 이 앱을 `node/vite_static` 으로 감지해
   `vite preview`(포트 4173)로 띄우는데, preview 는 모르는 Host 헤더를 403 으로 막는다.
   증상은 `Blocked request. This host ... is not allowed.`
