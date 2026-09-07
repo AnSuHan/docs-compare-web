@@ -1,6 +1,8 @@
-# DocDiff — M0 스캐폴딩
+# DocDiff — 문서 두 개를 브라우저에서 비교합니다
 
-문서 두 개를 브라우저에서 비교하는 웹앱. 이 저장소는 기획서의 **M0(T-001 ~ T-007)** 까지 구현된 상태다.
+파일은 서버로 전송되지 않습니다. 파싱·정규화·diff 가 전부 브라우저 안에서 돕니다(D-01).
+
+배포: https://web-hosting.egghosting.com/docdiff · 진단 화면 `/docdiff/admin`
 
 ## 빠른 시작
 
@@ -12,35 +14,40 @@ npm run verify     # 전송검사 + 테스트 + 빌드 + 번들예산. CI 가 �
 
 ## 지금 되는 것
 
-| 티켓 | 내용 | 상태 |
+| 형식 | 파서 | 방식 |
 |---|---|---|
-| T-001 | Vite + TS(strict) + React + Tailwind v4 + Vitest | ✅ |
-| T-002 | `src/core/types.ts` 전체 계약 확정 | ✅ |
-| T-003 | Comlink 워커 왕복 (`ping` / `parse` / `renormalize` / `diff`) | ✅ |
-| T-004 | kordoc 브라우저 구동 스파이크 | 🔧 도구 준비됨, 측정 필요 |
-| T-005 | PDF 구조 트리 적중률 스파이크 | 🔧 도구 준비됨, 측정 필요 |
-| T-006 | HWP 5.0 추출 성공률 스파이크 | 🔧 도구 준비됨, 측정 필요 |
-| T-007 | D-01 정적 검사 (파일 전송 코드 금지) | ✅ |
-| — | 번들 예산 검사 (초기 로드 200KB) | ✅ 현재 62.6KB |
+| txt | `txt@1` | BOM → UTF-8 엄격검사 → 후보 디코딩 점수 비교 (CP949·UTF-16 판정) |
+| md | `md@1` | 제목·목록·인용·코드펜스·표 블록 문법 |
+| docx | `docx@1` | `word/document.xml` 직접 파싱 |
+| hwpx | `hwpx@1` | `Contents/sectionN.xml` |
+| hwp | `hwp@1` | CFB → raw deflate → 레코드 → PARA_TEXT 제어문자 해석 |
+| pdf | `pdf@1` | 트랙 A 구조트리 → 트랙 B 기하 재조립 → 트랙 C 스캔 판정 |
 
-파서는 아직 **스텁**이다. `src/core/parsers/stub.ts` 가 바이트를 UTF-8 로 읽어 빈 줄로 끊는다.
-파이프라인이 끝까지 관통하는지 확인하는 것이 M0 의 목적이고, 실제 파서는 M1~M4 에서 하나씩 교체된다.
+diff 는 3단계다 — 블록 LCS(Myers + 앵커 분할) → 짝짓기(Dice) → 한국어 어절
+인라인. "계약서를 → 계약서는" 에서 조사 한 글자만 짚는다.
 
-## 스파이크 실행 방법
+UI: Unified/Split, 변경 요약, 변경점 점프, 미니맵, 동일 구간 접기, 비교 옵션
+토글(재파싱 없음), 뷰어 모드, 단축키.
 
-`npm run dev` → 페이지 하단 **"스파이크 도구 열기"**.
+테스트 150개, 초기 로드 69.6KB (예산 200KB).
 
-1. **T-004**: [확인] 버튼. kordoc 이 설치돼 있지 않으면 미설치로 나온다.
-   `npm i kordoc` 후 다시 눌러서 브라우저에서 import 되는지, Node 전용 의존성으로 깨지는지 본다.
-2. **T-005 / T-006**: 공문서 `.pdf` 와 `.hwp` 를 한꺼번에 선택.
-   - PDF: 페이지별 `getStructTree()` 유효 비율 → 트랙 A 적중률
-   - HWP: FileHeader → 압축 해제 → 레코드 → 제어문자 디코딩까지 실제로 돌린다.
-     성공률, 제어문자 잔여 수, 미지 코드 수가 나온다.
-   - 결과 JSON 을 그대로 `docs/decisions/` 에 붙이면 결정서가 된다.
+> **아직 실문서를 통과시켜 본 적이 없다.** 단위 테스트의 입력은 전부 합성
+> 데이터다. 무엇이 남았고 왜 그것이 1번인지는 `docs/NEXT.md` 를 본다.
+
+## 진단 화면
+
+`/docdiff/admin` 에서 확인할 수 있는 것.
+
+- 파서별 동작 방식·한계, 동적 import 성공 여부와 소요 시간
+- 런타임 확인 (euc-kr·utf-16le 디코더, WebAssembly, Worker, 워커 응답)
+- kordoc 설치 여부 (U-01 스파이크)
+- **파일 하나를 넣으면** 어떤 파서가 붙었는지, 몇 블록인지, 신뢰도·경고·
+  추출 트랙·소요 시간, 앞 10블록 미리보기
+- HWP·PDF 표본 측정 도구 (T-004 ~ T-006)
 
 **판단 기준**
 - HWP 성공률 < 80% → v1 에서 `.hwp` 제외, `.hwpx` 만 지원
-- 제어문자 잔여 > 0 → `paraText.ts` 의 8 WCHAR 처리 버그
+- 제어문자 잔여 > 0 → `hwp/paraText.ts` 의 8 WCHAR 처리 버그
 - PDF 트랙 A 적중률이 높을수록 §6.5 기하 재조립 부담이 줄어든다
 
 ## 구조
@@ -52,12 +59,14 @@ src/
 │   ├── detect.ts      매직 넘버 우선 형식 감지
 │   ├── mode.ts        비교/뷰어 모드 결정 (D-02)
 │   ├── normalize.ts   정규화 파이프라인 (NFC 는 항상 적용)
-│   ├── diff/          M0 는 LCS 만. 짝짓기·인라인은 M1
-│   └── parsers/       확장자 → 동적 import
+│   ├── xml.ts         DOM 없는 XML 스캐너 (워커에는 DOMParser 가 없다)
+│   ├── diff/          Myers + 앵커 분할, 짝짓기, 한국어 인라인
+│   └── parsers/       확장자 → 동적 import. pdf/ hwp/ 는 하위 폴더
 ├── workers/       Comlink 프로토콜 + 클라이언트
-├── components/    UI
+├── components/    diff/ viewer/ upload/ common/
+├── app/           라우터 + 비교 화면 + 관리 화면
 ├── store/         Zustand
-└── spikes/        M0 측정 도구. hwp/ 는 그대로 M4 로 승격된다
+└── spikes/        측정 도구 (/admin 에서 연다)
 ```
 
 ## 규칙
@@ -67,9 +76,9 @@ src/
 - **형식별 파서는 반드시 동적 import.** 정적으로 넣으면 번들 예산 검사가 실패한다.
 - **정규화 옵션을 바꿔도 재파싱하지 않는다.** `rawText` 를 들고 있으므로 `renormalize` 만 돈다.
 
-## 다음 (M1)
+## 다음
 
-T-010 형식 감지 마무리 → T-011 인코딩 감지 실파서 → T-013~T-015 diff 3단계 → T-016 Unified 가상 스크롤 → T-018 골든 테스트 하네스.
+`docs/NEXT.md` 에 남은 작업과 우선순위, 알려진 한계, 운영 메모를 정리해 뒀다.
 
 ## 배포 (에그호스팅)
 
