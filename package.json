@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "node server/static.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -15,7 +16,13 @@
     "lint:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.0.0",
     "@tanstack/react-virtual": "^3.13.0",
+    "@types/node": "^26.4.1",
+    "@types/pako": "^2.0.3",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
     "cfb": "^1.2.2",
     "comlink": "^4.4.2",
     "jszip": "^3.10.1",
@@ -23,18 +30,12 @@
     "pdfjs-dist": "^4.10.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zustand": "^5.0.3"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/node": "^26.4.1",
-    "@types/pako": "^2.0.3",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.3",
     "vite": "^6.0.11",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
     "vitest": "^3.0.5"
   }
 }

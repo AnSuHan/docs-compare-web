@@ -70,3 +70,18 @@ src/
 ## 다음 (M1)
 
 T-010 형식 감지 마무리 → T-011 인코딩 감지 실파서 → T-013~T-015 diff 3단계 → T-016 Unified 가상 스크롤 → T-018 골든 테스트 하네스.
+
+## 배포 (에그호스팅)
+
+`web-hosting` 서비스에 앱으로 올라간다. 여러 프로젝트를 한 서비스에 두므로 경로 라우팅을 쓴다.
+
+| 경로 | 앱 |
+|---|---|
+| `/` | php-project (기존) |
+| `/docdiff` | 이 프로젝트 |
+
+- `vite.config.ts` 의 `base: './'` — 어느 경로에 마운트해도 자산이 깨지지 않는다. 새 프로젝트도 이 값을 유지할 것.
+- `server/static.mjs` — `npm start` 가 띄우는 의존성 0 정적 서버. `dist/` 만 내려주고 문서 바이트는 서버로 오지 않는다(D-01).
+  마운트 prefix 가 붙어 오든 떼여 오든 둘 다 찾고, 자산이 아닌 경로는 `index.html` 로 떨어뜨린다.
+- **빌드 도구가 `dependencies` 에 있는 이유**: 배포 서버가 프로덕션 의존성만 설치한 뒤 `npm run build` 를 돌린다.
+  `vite`/`typescript`/`tailwindcss` 를 `devDependencies` 에 두면 `tsc: not found` 로 빌드가 실패한다.

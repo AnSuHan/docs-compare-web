@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
+  // 상대경로 자산. 어떤 경로에 마운트해도(예: /docdiff) 그대로 동작한다.
+  base: './',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
