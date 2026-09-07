@@ -6,6 +6,8 @@ import { SummaryBar } from '@/components/diff/SummaryBar';
 import { OptionToggles } from '@/components/diff/OptionToggles';
 import { WarningBanner } from '@/components/common/WarningBanner';
 import { ShortcutsHelp, useShortcuts } from '@/components/common/Shortcuts';
+import { Minimap } from '@/components/diff/Minimap';
+import { ViewerSplit } from '@/components/viewer/ViewerSplit';
 import { ping } from '@/workers/client';
 import { navigate } from './routes';
 
@@ -28,7 +30,7 @@ function useWideScreen(): boolean {
 export default function App() {
   const {
     files, mode, docs, diff, progress, error, busy, normalizeOptions, view, cursor,
-    setFile, swap, run, cancel, reset, setView, next, prev, setOption,
+    setFile, swap, run, cancel, reset, setView, next, prev, setCursor, setOption,
   } = useApp();
 
   const [worker, setWorker] = useState<string>('확인 중');
@@ -58,6 +60,18 @@ export default function App() {
   useShortcuts(handlers);
 
   const canRun = mode.kind === 'compare' && !busy;
+
+  // §10.4 — 스캔본·글꼴 깨짐은 비교가 불가능하다. 그럴 땐 뷰어로 보내야 한다.
+  const viewerOnly = error?.code === 'SCANNED_PDF' || error?.code === 'GARBLED_TEXT';
+  const showViewer =
+    !busy && !diff && (mode.kind === 'viewer-split' || mode.kind === 'viewer-single' || viewerOnly);
+  const viewerFiles = files.filter((f): f is File => f !== null);
+  const viewerNote =
+    mode.kind === 'viewer-split'
+      ? '형식이 서로 달라 비교할 수 없습니다. 내용만 나란히 봅니다.'
+      : viewerOnly
+        ? '이 문서는 비교할 수 없어 원본만 보여줍니다.'
+        : undefined;
   const names = useMemo(
     () => [files[0]?.name ?? '이전', files[1]?.name ?? '이후'] as [string, string],
     [files],
@@ -129,6 +143,12 @@ export default function App() {
         </p>
       )}
 
+      {showViewer && viewerFiles.length > 0 && (
+        <section className="mt-8">
+          <ViewerSplit files={viewerFiles} note={viewerNote} />
+        </section>
+      )}
+
       {diff && (
         <section className="mt-8 space-y-4">
           <SummaryBar
@@ -147,7 +167,13 @@ export default function App() {
           />
           <WarningBanner docs={docs} />
           <OptionToggles options={normalizeOptions} onChange={onOption} disabled={busy} />
-          <DiffView diff={diff} view={effectiveView} cursor={cursor} collapse />
+          <EdgeNotes files={files} docs={docs} diff={diff} />
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1">
+              <DiffView diff={diff} view={effectiveView} cursor={cursor} collapse />
+            </div>
+            <Minimap diff={diff} cursor={cursor} onPick={setCursor} />
+          </div>
         </section>
       )}
 
@@ -173,5 +199,46 @@ export default function App() {
 
       <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
+  );
+}
+
+/**
+ * §10.5 — 엣지 케이스는 빈 화면 대신 말로 설명한다.
+ * "아무것도 안 나온다"가 가장 나쁜 결과다.
+ */
+function EdgeNotes({
+  files,
+  docs,
+  diff,
+}: {
+  files: [File | null, File | null];
+  docs: Array<import('@/core/types').NormalizedDoc | null>;
+  diff: import('@/core/types').DiffResult;
+}) {
+  const notes: string[] = [];
+
+  const [a, b] = files;
+  if (a && b && a.name === b.name && a.size === b.size) {
+    notes.push('같은 파일을 두 번 올리신 것 같습니다.');
+  }
+
+  for (const d of docs) {
+    if (d && d.blocks.length === 0) notes.push(`${d.meta.fileName} 에서 읽을 내용이 없습니다.`);
+  }
+
+  const { equalBlocks, insertBlocks, deleteBlocks, modifyBlocks } = diff.stats;
+  const changed = insertBlocks + deleteBlocks + modifyBlocks;
+  if (equalBlocks === 0 && changed > 0) {
+    notes.push('두 문서에 공통 부분이 거의 없습니다. 파일을 잘못 고르지 않았는지 확인해 주세요.');
+  }
+
+  if (notes.length === 0) return null;
+
+  return (
+    <ul className="space-y-1 rounded-lg border border-[var(--color-ink-200)] bg-[var(--color-ink-100)] p-3 text-sm">
+      {notes.map((n) => (
+        <li key={n}>{n}</li>
+      ))}
+    </ul>
   );
 }

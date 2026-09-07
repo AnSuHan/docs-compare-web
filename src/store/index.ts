@@ -32,6 +32,7 @@ interface AppState {
   setView(v: ViewMode): void;
   next(): void;
   prev(): void;
+  setCursor(i: number): void;
   setOption<K extends keyof NormalizeOptions>(k: K, v: NormalizeOptions[K]): Promise<void>;
 }
 
@@ -158,6 +159,13 @@ export const useApp = create<AppState>((set, get) => ({
     const { diff, cursor } = get();
     if (!diff || diff.changeIndices.length === 0) return;
     set({ cursor: Math.max(cursor - 1, 0) });
+  },
+
+  /** 미니맵에서 직접 짚었을 때. 범위를 벗어난 값은 무시한다. */
+  setCursor(i) {
+    const { diff } = get();
+    if (!diff || i < 0 || i >= diff.changeIndices.length) return;
+    set({ cursor: i });
   },
 
   /** 재파싱하지 않는다. 정규화만 다시 적용하고 diff 를 새로 돌린다(§4.3). */
