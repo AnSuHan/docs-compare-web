@@ -36,6 +36,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('첫 화면', async ({ page }) => {
+  // 밝은 팔레트가 실제로 적용됐는지부터 본다. 한동안 다크 값이 밝은 값을 덮어써
+  // 이 검사들이 전부 다크 화면만 보고 있었다.
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(246, 247, 248)');
+
   expect(await audit(page)).toEqual([]);
 });
 
