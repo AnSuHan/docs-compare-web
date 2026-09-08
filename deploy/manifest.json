@@ -1,6 +1,6 @@
 {
   "app": "docdiff",
-  "updatedAt": "2026-09-08T23:40:59.969Z",
+  "updatedAt": "2026-09-08T23:51:25.895Z",
   "note": "마지막으로 배포한 파일들의 해시. scripts/deploy-plan.mjs 가 읽고 쓴다.",
   "files": {
     "index.html": "f08fdb4658f2910e",
@@ -60,7 +60,7 @@
     "src/core/parsers/text.ts": "cc1fe689a9b075b5",
     "src/core/types.ts": "95af45bdfa39a6ed",
     "src/core/xml.ts": "0d7dc321cac25447",
-    "src/index.css": "00f38103ae87013a",
+    "src/index.css": "74fd13801b961494",
     "src/main.tsx": "b157be541e329732",
     "src/spikes/SpikePanel.tsx": "52f080ed10bc287a",
     "src/spikes/hwp/probe.ts": "778c6ff93adbcea8",
