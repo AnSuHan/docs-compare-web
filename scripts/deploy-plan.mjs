@@ -47,6 +47,15 @@ const EXCLUDE = [
   /^package-lock\.json$/,
   /^vitest\.config\.ts$/,
   /^scripts\/deploy-plan\.mjs$/, // 로컬 전용 도구. 서버에 올릴 이유가 없다
+  /^scripts\/inspect\.ts$/, // 실문서 검수 하네스. 로컬 전용
+  /^src\/fixtures\//, // 검수용 문서 자리. 앱이 import 하지 않는다
+  /**
+   * 배포 서버는 프로덕션 의존성만 설치한 뒤 `npm run build`(= tsc -b)를 돌린다.
+   * 이 파일은 tsconfig 의 include 에 들어 있고 @playwright/test 를 import 하므로,
+   * 올리면 서버에서 "모듈을 찾을 수 없다" 로 빌드가 통째로 깨진다.
+   * (tests/ 를 빼는 이유도 같다 — vitest 가 devDependency 다.)
+   */
+  /^playwright\.config\.ts$/,
   /\.tsbuildinfo$/,
 ];
 
