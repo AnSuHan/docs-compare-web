@@ -22,6 +22,14 @@
   --color-del-bg:     #ffebe9;
   --color-del-strong: #ffc1bc;
 
+  /*
+    strong 은 강조 "배경"이다(mark 뒤에 깔린다). 같은 색을 글자색으로 쓰면
+    본문 배경 위에서 대비가 4.5:1 에 못 미친다 — axe 가 잡았다(T-072).
+    글자로 쓸 초록/빨강은 따로 둔다.
+  */
+  --color-add-text: #106b2e;
+  --color-del-text: #b3261e;
+
   --font-sans: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI",
                "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-mono: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
@@ -40,6 +48,9 @@
     --color-add-strong: #1a7f37;
     --color-del-bg:     #5a1e1e;
     --color-del-strong: #b62324;
+
+    --color-add-text: #4ade80;
+    --color-del-text: #ff8a80;
   }
 }
 

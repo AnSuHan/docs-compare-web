@@ -132,7 +132,9 @@ export default function App() {
       {progress && (
         <p
           role="progressbar"
+          aria-label="처리 진행률"
           aria-valuenow={progress.current}
+          aria-valuemin={0}
           aria-valuemax={progress.total}
           className="mt-4 text-sm text-[var(--color-ink-600)]"
         >

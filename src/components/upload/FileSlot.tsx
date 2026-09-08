@@ -51,6 +51,8 @@ export function FileSlot({ label, file, onPick, disabled }: Props) {
           type="file"
           accept={ACCEPT}
           className="sr-only"
+          // sr-only 라 눈에는 안 보여도 스크린리더에는 남는다. 이름이 없으면 "편집" 으로만 읽힌다.
+          aria-label={`${label} 문서 고르기`}
           onChange={(e) => take(e.target.files)}
         />
         <button

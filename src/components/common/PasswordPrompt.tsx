@@ -71,7 +71,7 @@ export function PasswordPrompt({
         />
 
         {ask.wrong && (
-          <p role="alert" className="mt-2 text-sm text-[var(--color-del-strong)]">
+          <p role="alert" className="mt-2 text-sm text-[var(--color-del-text)]">
             비밀번호가 맞지 않습니다. 다시 입력해 주세요.
           </p>
         )}

@@ -167,7 +167,7 @@ export function AdminPage() {
                     )}
                     {load?.status === 'loading' && '불러오는 중…'}
                     {load?.status === 'ok' && <span className="text-[var(--color-ink-600)]">불러옴 · {load.ms}ms</span>}
-                    {load?.status === 'fail' && <span className="text-[var(--color-del-strong)]">실패: {load.error}</span>}
+                    {load?.status === 'fail' && <span className="text-[var(--color-del-text)]">실패: {load.error}</span>}
                   </span>
                 </div>
 
@@ -195,7 +195,7 @@ export function AdminPage() {
         <ul className="divide-y divide-[var(--color-ink-200)] rounded-lg border border-[var(--color-ink-200)]">
           {Object.entries(checks).map(([name, c]) => (
             <li key={name} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-              <span aria-hidden className={c.ok ? 'text-[var(--color-add-strong)]' : 'text-[var(--color-del-strong)]'}>
+              <span aria-hidden className={c.ok ? 'text-[var(--color-add-text)]' : 'text-[var(--color-del-text)]'}>
                 {c.ok ? '✓' : '✕'}
               </span>
               <span>{name}</span>
@@ -234,6 +234,7 @@ export function AdminPage() {
         </p>
         <input
           type="file"
+          aria-label="검사할 문서 고르기"
           className="block text-sm"
           disabled={busy}
           onChange={(e) => {
@@ -247,7 +248,7 @@ export function AdminPage() {
           <div className="mt-3 rounded-lg border border-[var(--color-ink-200)] p-4 text-sm">
             <div className="font-medium">{probe.file}</div>
             {probe.error ? (
-              <p className="mt-2 text-[var(--color-del-strong)]">{probe.error}</p>
+              <p className="mt-2 text-[var(--color-del-text)]">{probe.error}</p>
             ) : (
               probe.doc && <ParseSummary doc={probe.doc} ms={probe.ms} />
             )}

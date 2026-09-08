@@ -66,8 +66,8 @@ export function SummaryBar({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <span className="font-[var(--font-mono)]">
-          <span className="text-[var(--color-add-strong)]">+{stats.insertBlocks}</span>{' '}
-          <span className="text-[var(--color-del-strong)]">−{stats.deleteBlocks}</span>{' '}
+          <span className="text-[var(--color-add-text)]">+{stats.insertBlocks}</span>{' '}
+          <span className="text-[var(--color-del-text)]">−{stats.deleteBlocks}</span>{' '}
           <span className="text-[var(--color-ink-600)]">~{stats.modifyBlocks}</span>
         </span>
         <span className="text-xs text-[var(--color-ink-400)]">
@@ -104,7 +104,7 @@ export function SummaryBar({
       </div>
 
       {diff.truncated && (
-        <p className="text-xs text-[var(--color-del-strong)]">
+        <p className="text-xs text-[var(--color-del-text)]">
           시간이 초과돼 앞부분까지만 비교했습니다. 아래 결과는 일부입니다.
         </p>
       )}
