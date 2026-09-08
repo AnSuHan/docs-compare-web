@@ -10,6 +10,7 @@
 npm install
 npm run dev        # 개발 서버
 npm run verify     # 전송검사 + 테스트 + 빌드 + 번들예산. CI 가 도는 것과 같다
+npm run inspect    # src/fixtures/private 의 실문서를 파서에 통과시켜 본다
 ```
 
 ## 지금 되는 것
@@ -27,9 +28,10 @@ diff 는 3단계다 — 블록 LCS(Myers + 앵커 분할) → 짝짓기(Dice) �
 인라인. "계약서를 → 계약서는" 에서 조사 한 글자만 짚는다.
 
 UI: Unified/Split, 변경 요약, 변경점 점프, 미니맵, 동일 구간 접기, 비교 옵션
-토글(재파싱 없음), 뷰어 모드, 단축키.
+토글(재파싱 없음), 뷰어 모드, 단축키, 암호 PDF 비밀번호 입력(T-040 — 비밀번호도
+브라우저 밖으로 나가지 않는다).
 
-테스트 150개, 초기 로드 69.6KB (예산 200KB).
+테스트 163개, 초기 로드 70.6KB (예산 200KB).
 
 > **아직 실문서를 통과시켜 본 적이 없다.** 단위 테스트의 입력은 전부 합성
 > 데이터다. 무엇이 남았고 왜 그것이 1번인지는 `docs/NEXT.md` 를 본다.
@@ -50,6 +52,21 @@ UI: Unified/Split, 변경 요약, 변경점 점프, 미니맵, 동일 구간 접
 - 제어문자 잔여 > 0 → `hwp/paraText.ts` 의 8 WCHAR 처리 버그
 - PDF 트랙 A 적중률이 높을수록 §6.5 기하 재조립 부담이 줄어든다
 
+## 터미널 검수 (`npm run inspect`)
+
+파일을 하나씩 화면에 넣는 대신 폴더째 돌린다. 워커를 거치지 않고
+`document.worker.ts` 와 같은 순서로 파서를 직접 부르며, 위 판단 기준을
+그대로 코드로 옮겨 파일마다 근거를 찍는다.
+
+```bash
+npm run inspect                        # src/fixtures/private 전체
+npm run inspect -- 어떤파일.hwp        # 하나만
+npm run inspect -- --json snapshots/   # NormalizedDoc 스냅샷 저장 (T-018 의 입력)
+```
+
+문서를 어디에 넣고 무엇을 모아야 하는지는 `src/fixtures/README.md` 에 있다
+(`private/` 은 `.gitignore` 라 개인 문서를 넣어도 커밋되지 않는다).
+
 ## 구조
 
 ```
@@ -66,6 +83,7 @@ src/
 ├── components/    diff/ viewer/ upload/ common/
 ├── app/           라우터 + 비교 화면 + 관리 화면
 ├── store/         Zustand
+├── fixtures/      검수용 실문서 자리 (private/ 는 커밋되지 않는다)
 └── spikes/        측정 도구 (/admin 에서 연다)
 ```
 

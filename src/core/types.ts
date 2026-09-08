@@ -177,4 +177,9 @@ export interface ParseCtx {
   progress: ProgressFn;
   shouldAbort: AbortFn;
   options: NormalizeOptions;
+  /**
+   * 암호가 걸린 문서를 열 때만 채워진다(T-040).
+   * 메모리에만 있고 저장되지 않는다 — 파일과 마찬가지로 서버로 가지 않는다(D-01).
+   */
+  password?: string;
 }

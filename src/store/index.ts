@@ -11,6 +11,23 @@ import { parseFile, renormalize, runDiff, terminateWorker } from '@/workers/clie
 type Slot = 0 | 1;
 export type ViewMode = 'split' | 'unified';
 
+/**
+ * T-040 — 암호가 걸린 문서를 다시 열 때 쓰는 비밀번호를 파일별로 들고 있는다.
+ * 메모리에만 둔다. localStorage 에도, 서버에도 가지 않는다(D-01).
+ */
+export function fileKey(f: File): string {
+  return `${f.name}|${f.size}|${f.lastModified}`;
+}
+
+export interface PasswordAsk {
+  key: string;
+  fileName: string;
+  /** 이미 한 번 틀린 뒤인가. 모달 문구가 달라진다. */
+  wrong: boolean;
+  /** 비교하다가 막힌 것인지, 뷰어에서 막힌 것인지. 비밀번호를 받은 뒤 할 일이 다르다. */
+  source: 'compare' | 'viewer';
+}
+
 interface AppState {
   files: [File | null, File | null];
   mode: Mode;
@@ -23,6 +40,10 @@ interface AppState {
   view: ViewMode;
   /** changeIndices 내 현재 위치. -1 이면 아직 아무 데도 안 갔다. */
   cursor: number;
+  /** 파일별 비밀번호. 메모리에만 산다. */
+  passwords: Record<string, string>;
+  /** 비밀번호 모달을 띄워야 하는 상태. null 이면 닫혀 있다. */
+  passwordAsk: PasswordAsk | null;
 
   setFile(slot: Slot, f: File | null): void;
   swap(): void;
@@ -34,6 +55,10 @@ interface AppState {
   prev(): void;
   setCursor(i: number): void;
   setOption<K extends keyof NormalizeOptions>(k: K, v: NormalizeOptions[K]): Promise<void>;
+  /** 뷰어에서 암호 문서를 만났을 때. 비교 경로는 run() 이 스스로 연다. */
+  askPassword(file: File, wrong: boolean): void;
+  submitPassword(password: string): Promise<void>;
+  dismissPassword(): void;
 }
 
 /** 취소 플래그. 워커에는 proxy 콜백으로 전달된다. */
@@ -76,6 +101,8 @@ export const useApp = create<AppState>((set, get) => ({
   normalizeOptions: DEFAULT_NORMALIZE.text,
   view: 'unified',
   cursor: -1,
+  passwords: {},
+  passwordAsk: null,
 
   setFile(slot, f) {
     const files = [...get().files] as [File | null, File | null];
@@ -87,6 +114,7 @@ export const useApp = create<AppState>((set, get) => ({
       error: null,
       docs: [null, null],
       cursor: -1,
+      passwordAsk: null,
       // 형식이 정해지면 그 형식의 기본 옵션으로 맞춘다.
       normalizeOptions: defaultOptionsFor(files),
     });
@@ -109,26 +137,56 @@ export const useApp = create<AppState>((set, get) => ({
     const onProgress = (p: Progress) => set({ progress: p });
     const shouldAbort = () => aborted;
 
+    /**
+     * 이미 읽은 파일은 다시 읽지 않는다.
+     * 비밀번호를 넣고 재시도할 때(T-040) 앞 파일까지 또 파싱하면 30MB 를 두 번 읽게 된다.
+     */
+    const parseSlot = async (slot: Slot, f: File): Promise<NormalizedDoc> => {
+      const cached = get().docs[slot];
+      if (cached && cached.meta.fileName === f.name && cached.meta.fileSize === f.size) return cached;
+
+      const doc = await parseFile(f, normalizeOptions, onProgress, shouldAbort, get().passwords[fileKey(f)]);
+      const docs = [...get().docs] as [NormalizedDoc | null, NormalizedDoc | null];
+      docs[slot] = doc;
+      set({ docs });
+      return doc;
+    };
+
     try {
       const [fa, fb] = files as [File, File];
-      const a = await parseFile(fa, normalizeOptions, onProgress, shouldAbort);
+      const a = await parseSlot(0, fa);
       if (aborted) throw new AppError('ABORTED');
-      const b = await parseFile(fb, normalizeOptions, onProgress, shouldAbort);
+      const b = await parseSlot(1, fb);
       if (aborted) throw new AppError('ABORTED');
 
-      set({ docs: [a, b], progress: { phase: 'diffing', current: 0, total: 1 } });
+      set({ progress: { phase: 'diffing', current: 0, total: 1 } });
 
       const diff = await runDiff(a, b, diffOptionsFrom(normalizeOptions));
       set({ diff, busy: false, progress: null });
     } catch (e) {
-      set({ error: e instanceof AppError ? e : new AppError('CORRUPTED', String(e)), busy: false, progress: null });
+      const err = e instanceof AppError ? e : new AppError('CORRUPTED', String(e));
+
+      // 암호 문서는 실패가 아니라 "물어볼 것이 남은 상태"다. 에러 대신 모달을 연다.
+      if (err.code === 'PDF_PASSWORD_REQUIRED' || err.code === 'PDF_PASSWORD_WRONG') {
+        const f = get().files.find((x): x is File => x !== null && x.name === err.detail);
+        if (f) {
+          set({
+            busy: false,
+            progress: null,
+            error: null,
+            passwordAsk: { key: fileKey(f), fileName: f.name, wrong: err.code === 'PDF_PASSWORD_WRONG', source: 'compare' },
+          });
+          return;
+        }
+      }
+      set({ error: err, busy: false, progress: null });
     }
   },
 
   cancel() {
     aborted = true;
     terminateWorker();
-    set({ busy: false, progress: null, error: new AppError('ABORTED') });
+    set({ busy: false, progress: null, passwordAsk: null, error: new AppError('ABORTED') });
   },
 
   reset() {
@@ -142,6 +200,9 @@ export const useApp = create<AppState>((set, get) => ({
       progress: null,
       busy: false,
       cursor: -1,
+      // 비밀번호도 함께 버린다. "처음부터" 는 아무것도 안 들고 있는 상태여야 한다.
+      passwords: {},
+      passwordAsk: null,
     });
   },
 
@@ -184,5 +245,26 @@ export const useApp = create<AppState>((set, get) => ({
     } catch (e) {
       set({ error: e instanceof AppError ? e : new AppError('CORRUPTED', String(e)), busy: false });
     }
+  },
+
+  askPassword(file, wrong) {
+    set({ passwordAsk: { key: fileKey(file), fileName: file.name, wrong, source: 'viewer' } });
+  },
+
+  async submitPassword(password) {
+    const ask = get().passwordAsk;
+    if (!ask) return;
+    set({ passwords: { ...get().passwords, [ask.key]: password }, passwordAsk: null });
+    // 뷰어는 password 가 바뀌면 스스로 다시 그린다. 비교만 여기서 다시 돌린다.
+    if (ask.source === 'compare') await get().run();
+  },
+
+  dismissPassword() {
+    const ask = get().passwordAsk;
+    set({
+      passwordAsk: null,
+      // 비교하다 막힌 것이면 빈 화면 대신 이유를 남긴다.
+      error: ask?.source === 'compare' ? new AppError('PDF_PASSWORD_REQUIRED', ask.fileName) : null,
+    });
   },
 }));

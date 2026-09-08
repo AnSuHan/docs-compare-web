@@ -8,6 +8,8 @@ export type ErrorCode =
   | 'EMPTY_FILE'
   | 'CORRUPTED'
   | 'ENCRYPTED'
+  | 'PDF_PASSWORD_REQUIRED'
+  | 'PDF_PASSWORD_WRONG'
   | 'NOT_HWP'
   | 'LEGACY_DOC'
   | 'HWP_DISTRIBUTION_DOC'
@@ -26,6 +28,8 @@ const MESSAGES: Record<ErrorCode, string> = {
   EMPTY_FILE: '파일이 비어 있습니다.',
   CORRUPTED: '파일을 읽을 수 없습니다. 손상된 것 같습니다.',
   ENCRYPTED: '암호가 걸린 문서입니다.',
+  PDF_PASSWORD_REQUIRED: '암호가 걸린 PDF 입니다. 비밀번호를 입력해 주세요.',
+  PDF_PASSWORD_WRONG: '비밀번호가 맞지 않습니다. 다시 입력해 주세요.',
   NOT_HWP: '한글 문서 형식이 아닙니다.',
   LEGACY_DOC: '구버전 워드 문서(.doc)는 지원하지 않습니다. 워드에서 .docx 로 저장한 뒤 올려주세요.',
   HWP_DISTRIBUTION_DOC: '배포용으로 보호된 문서라 열 수 없습니다. 한/글에서 일반 문서로 다시 저장한 뒤 올려주세요.',

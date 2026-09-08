@@ -40,10 +40,18 @@ async function loadPdfjs() {
   return pdfjs;
 }
 
-function toAppError(e: unknown, fileName: string): AppError {
+/** pdfjs PasswordResponses. 1 = 비밀번호가 필요하다, 2 = 준 비밀번호가 틀렸다. */
+const NEED_PASSWORD = 1;
+
+/** pdfjs 가 던진 것을 우리 에러로 바꾼다. 분류가 UI 동작을 가르므로 테스트에서 직접 부른다. */
+export function toAppError(e: unknown, fileName: string): AppError {
   const name = (e as { name?: string })?.name ?? '';
   const msg = e instanceof Error ? e.message : String(e);
-  if (name === 'PasswordException') return new AppError('ENCRYPTED', fileName);
+  if (name === 'PasswordException') {
+    // 둘을 구분해야 UI 가 "입력해 주세요" 와 "틀렸습니다" 를 가려 말할 수 있다(T-040).
+    const code = (e as { code?: number }).code === NEED_PASSWORD ? 'PDF_PASSWORD_REQUIRED' : 'PDF_PASSWORD_WRONG';
+    return new AppError(code, fileName);
+  }
   if (name === 'InvalidPDFException') return new AppError('CORRUPTED', msg);
   if (e instanceof AppError) return e;
   return new AppError('CORRUPTED', msg);
@@ -120,6 +128,8 @@ export const pdfParser: Parser = {
         isEvalSupported: false,
         // 폰트를 실제로 그리지 않으므로 표준 폰트 데이터는 필요 없다.
         disableFontFace: true,
+        // 없으면 pdfjs 가 PasswordException 을 던진다. 위에서 코드로 갈라 UI 에 넘긴다.
+        ...(ctx.password ? { password: ctx.password } : {}),
       }).promise;
     } catch (e) {
       throw toAppError(e, fileName);

@@ -40,12 +40,14 @@ export async function parseFile(
   options: NormalizeOptions,
   onProgress: (p: Progress) => void,
   shouldAbort: () => boolean,
+  /** 암호가 걸린 문서를 다시 열 때만 넘긴다(T-040). */
+  password?: string,
 ): Promise<NormalizedDoc> {
   const buffer = await file.arrayBuffer();
   return ensure()
     .parse(
       // ArrayBuffer 는 transfer 로 넘긴다. 30MB 복사 비용이 사라진다.
-      Comlink.transfer({ buffer, fileName: file.name, options }, [buffer]),
+      Comlink.transfer({ buffer, fileName: file.name, options, password }, [buffer]),
       Comlink.proxy(onProgress),
       Comlink.proxy(shouldAbort),
     )

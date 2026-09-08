@@ -12,15 +12,33 @@ import { useEffect, useRef, useState } from 'react';
 
 const MAX_RENDER_PAGES = 30;
 
-export function PdfViewer({ file }: { file: File }) {
+/** pdfjs PasswordResponses. 1 = 비밀번호가 필요하다, 2 = 준 비밀번호가 틀렸다. */
+const NEED_PASSWORD = 1;
+
+export function PdfViewer({
+  file,
+  password,
+  onPasswordRequired,
+}: {
+  file: File;
+  /** T-040 — 암호 문서일 때만 채워진다. 여기서 밖으로 나가지 않는다. */
+  password?: string;
+  onPasswordRequired?: (wrong: boolean) => void;
+}) {
   const host = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'ok' | 'error' | 'locked'>('loading');
   const [message, setMessage] = useState('');
   const [pages, setPages] = useState(0);
+
+  // 콜백을 effect 의존성에 두면 부모가 다시 그릴 때마다 PDF 를 통째로 다시 그린다.
+  const notifyPassword = useRef(onPasswordRequired);
+  notifyPassword.current = onPasswordRequired;
 
   useEffect(() => {
     let cancelled = false;
     const canvases: HTMLCanvasElement[] = [];
+    // 비밀번호를 받고 다시 들어온 경우가 있다. 이전 상태를 그대로 두지 않는다.
+    setStatus('loading');
 
     (async () => {
       try {
@@ -31,7 +49,11 @@ export function PdfViewer({ file }: { file: File }) {
         }
 
         const data = new Uint8Array(await file.arrayBuffer());
-        const doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
+        const doc = await pdfjs.getDocument({
+          data,
+          isEvalSupported: false,
+          ...(password ? { password } : {}),
+        }).promise;
         if (cancelled) return;
 
         setPages(doc.numPages);
@@ -71,6 +93,12 @@ export function PdfViewer({ file }: { file: File }) {
         if (!cancelled) setStatus('ok');
       } catch (e) {
         if (cancelled) return;
+        // 암호 문서는 실패가 아니라 물어볼 것이 남은 상태다(T-040).
+        if ((e as { name?: string })?.name === 'PasswordException') {
+          setStatus('locked');
+          notifyPassword.current?.((e as { code?: number }).code !== NEED_PASSWORD);
+          return;
+        }
         setStatus('error');
         setMessage(e instanceof Error ? e.message : String(e));
       }
@@ -80,7 +108,7 @@ export function PdfViewer({ file }: { file: File }) {
       cancelled = true;
       for (const c of canvases) c.remove();
     };
-  }, [file]);
+  }, [file, password]);
 
   return (
     <div className="space-y-2">
@@ -88,6 +116,11 @@ export function PdfViewer({ file }: { file: File }) {
       {status === 'error' && (
         <p className="rounded border border-[var(--color-del-strong)] bg-[var(--color-del-bg)] p-3 text-sm">
           이 PDF 를 열지 못했습니다. {message}
+        </p>
+      )}
+      {status === 'locked' && (
+        <p className="rounded border border-[var(--color-ink-200)] bg-[var(--color-ink-100)] p-3 text-sm">
+          암호가 걸린 PDF 입니다. 비밀번호를 입력하면 이 자리에 원본을 그립니다.
         </p>
       )}
       {status === 'ok' && pages > MAX_RENDER_PAGES && (

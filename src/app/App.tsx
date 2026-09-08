@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useApp } from '@/store';
+import { fileKey, useApp } from '@/store';
 import { FileSlot } from '@/components/upload/FileSlot';
 import { DiffView } from '@/components/diff/DiffView';
 import { SummaryBar } from '@/components/diff/SummaryBar';
@@ -8,6 +8,7 @@ import { WarningBanner } from '@/components/common/WarningBanner';
 import { ShortcutsHelp, useShortcuts } from '@/components/common/Shortcuts';
 import { Minimap } from '@/components/diff/Minimap';
 import { ViewerSplit } from '@/components/viewer/ViewerSplit';
+import { PasswordPrompt } from '@/components/common/PasswordPrompt';
 import { ping } from '@/workers/client';
 import { navigate } from './routes';
 
@@ -30,7 +31,9 @@ function useWideScreen(): boolean {
 export default function App() {
   const {
     files, mode, docs, diff, progress, error, busy, normalizeOptions, view, cursor,
+    passwords, passwordAsk,
     setFile, swap, run, cancel, reset, setView, next, prev, setCursor, setOption,
+    askPassword, submitPassword, dismissPassword,
   } = useApp();
 
   const [worker, setWorker] = useState<string>('확인 중');
@@ -51,11 +54,12 @@ export default function App() {
       toggleWhitespace: () => void setOption('ignoreWhitespace', !normalizeOptions.ignoreWhitespace),
       escape: () => {
         if (helpOpen) setHelpOpen(false);
+        else if (passwordAsk) dismissPassword();
         else if (busy) cancel();
       },
       help: () => setHelpOpen((v) => !v),
     }),
-    [next, prev, setView, view, setOption, normalizeOptions.ignoreWhitespace, helpOpen, busy, cancel],
+    [next, prev, setView, view, setOption, normalizeOptions.ignoreWhitespace, helpOpen, busy, cancel, passwordAsk, dismissPassword],
   );
   useShortcuts(handlers);
 
@@ -145,7 +149,12 @@ export default function App() {
 
       {showViewer && viewerFiles.length > 0 && (
         <section className="mt-8">
-          <ViewerSplit files={viewerFiles} note={viewerNote} />
+          <ViewerSplit
+            files={viewerFiles}
+            note={viewerNote}
+            passwordFor={(f) => passwords[fileKey(f)]}
+            onPasswordRequired={askPassword}
+          />
         </section>
       )}
 
@@ -198,6 +207,7 @@ export default function App() {
       </footer>
 
       <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <PasswordPrompt ask={passwordAsk} onSubmit={(pw) => void submitPassword(pw)} onCancel={dismissPassword} />
     </div>
   );
 }

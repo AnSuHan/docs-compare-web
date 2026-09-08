@@ -17,7 +17,7 @@ const api: WorkerApi = {
   },
 
   async parse(req: ParseRequest, onProgress: (p: Progress) => void, shouldAbort: () => boolean) {
-    const { buffer, fileName, options } = req;
+    const { buffer, fileName, options, password } = req;
 
     if (buffer.byteLength === 0) throw new AppError('EMPTY_FILE', fileName);
     if (buffer.byteLength > LIMITS.MAX_FILE_BYTES) throw new AppError('FILE_TOO_LARGE', fileName);
@@ -30,6 +30,7 @@ const api: WorkerApi = {
       progress: onProgress,
       shouldAbort,
       options,
+      password,
     });
 
     if (mismatch) {

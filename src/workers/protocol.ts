@@ -6,6 +6,8 @@ export interface ParseRequest {
   buffer: ArrayBuffer;
   fileName: string;
   options: NormalizeOptions;
+  /** 암호가 걸린 문서를 다시 열 때만 채운다(T-040). 워커 안에서만 쓰이고 어디에도 남지 않는다. */
+  password?: string;
 }
 
 /**

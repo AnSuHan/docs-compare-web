@@ -13,7 +13,13 @@ import { TextViewer } from './TextViewer';
  */
 const PdfViewer = lazy(() => import('./PdfViewer').then((m) => ({ default: m.PdfViewer })));
 
-function Pane({ file }: { file: File }) {
+interface PasswordProps {
+  /** T-040 — 파일별 비밀번호. 암호 PDF 를 뷰어에서 열 때만 쓴다. */
+  password?: string;
+  onPasswordRequired?: (file: File, wrong: boolean) => void;
+}
+
+function Pane({ file, password, onPasswordRequired }: { file: File } & PasswordProps) {
   const isPdf = formatFromExt(file.name) === 'pdf';
 
   return (
@@ -24,7 +30,11 @@ function Pane({ file }: { file: File }) {
       <div className="max-h-[70vh] overflow-auto">
         {isPdf ? (
           <Suspense fallback={<p className="text-sm text-[var(--color-ink-600)]">뷰어 불러오는 중…</p>}>
-            <PdfViewer file={file} />
+            <PdfViewer
+              file={file}
+              password={password}
+              onPasswordRequired={onPasswordRequired && ((wrong) => onPasswordRequired(file, wrong))}
+            />
           </Suspense>
         ) : (
           <TextViewer file={file} />
@@ -34,7 +44,18 @@ function Pane({ file }: { file: File }) {
   );
 }
 
-export function ViewerSplit({ files, note }: { files: File[]; note?: string }) {
+export function ViewerSplit({
+  files,
+  note,
+  passwordFor,
+  onPasswordRequired,
+}: {
+  files: File[];
+  note?: string;
+  /** T-040 — 파일에 걸린 비밀번호를 찾아 준다. 키를 어떻게 만드는지는 뷰어가 알 필요 없다. */
+  passwordFor?: (file: File) => string | undefined;
+  onPasswordRequired?: (file: File, wrong: boolean) => void;
+}) {
   const present = files.filter(Boolean);
   if (present.length === 0) return null;
 
@@ -45,7 +66,12 @@ export function ViewerSplit({ files, note }: { files: File[]; note?: string }) {
       )}
       <div className={present.length > 1 ? 'grid gap-4 md:grid-cols-2' : ''}>
         {present.map((f) => (
-          <Pane key={f.name + f.size + f.lastModified} file={f} />
+          <Pane
+            key={f.name + f.size + f.lastModified}
+            file={f}
+            password={passwordFor?.(f)}
+            onPasswordRequired={onPasswordRequired}
+          />
         ))}
       </div>
     </div>
