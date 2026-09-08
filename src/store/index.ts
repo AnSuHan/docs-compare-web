@@ -134,7 +134,15 @@ export const useApp = create<AppState>((set, get) => ({
     aborted = false;
     set({ busy: true, error: null, diff: null, progress: null, cursor: -1 });
 
-    const onProgress = (p: Progress) => set({ progress: p });
+    /**
+     * 취소한 뒤에 뒤늦게 도착한 진행률은 버린다.
+     * 워커를 terminate 해도 이미 큐에 올라온 메시지는 배달된다. 그걸 그대로 반영하면
+     * "중단했습니다" 를 띄운 화면에 진행률이 되살아나 영영 남는다 (E2E 시나리오 3).
+     */
+    const onProgress = (p: Progress) => {
+      if (aborted) return;
+      set({ progress: p });
+    };
     const shouldAbort = () => aborted;
 
     /**

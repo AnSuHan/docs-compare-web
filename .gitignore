@@ -5,3 +5,8 @@ dist
 coverage
 src/fixtures/private
 *.tsbuildinfo
+
+# e2e
+tests/e2e/.fixtures
+test-results
+playwright-report

@@ -11,12 +11,29 @@ import { LIMITS } from '@/core/limits';
 
 const WORKER_VERSION = '0.1.0';
 
+/**
+ * Comlink 는 던져진 Error 를 message/name/stack 으로만 직렬화한다.
+ * 그대로 두면 AppError 의 `code` 가 경계를 넘으면서 사라지고, 화면은 어떤 실패든
+ * 문구만 같은 CORRUPTED 로 본다 — 암호 PDF 에서 비밀번호를 물어볼 수조차 없다(T-040).
+ * 그래서 평범한 객체로 바꿔 던진다. 클라이언트가 isAppErrorPayload 로 되살린다.
+ */
+function keepErrorCode<A extends unknown[], R>(fn: (...args: A) => Promise<R>): (...args: A) => Promise<R> {
+  return async (...args: A) => {
+    try {
+      return await fn(...args);
+    } catch (e) {
+      if (e instanceof AppError) throw e.toJSON();
+      throw e;
+    }
+  };
+}
+
 const api: WorkerApi = {
   async ping() {
     return { ok: true, version: WORKER_VERSION };
   },
 
-  async parse(req: ParseRequest, onProgress: (p: Progress) => void, shouldAbort: () => boolean) {
+  parse: keepErrorCode(async (req: ParseRequest, onProgress: (p: Progress) => void, shouldAbort: () => boolean) => {
     const { buffer, fileName, options, password } = req;
 
     if (buffer.byteLength === 0) throw new AppError('EMPTY_FILE', fileName);
@@ -42,7 +59,7 @@ const api: WorkerApi = {
       });
     }
     return doc;
-  },
+  }),
 
   async renormalize(doc: NormalizedDoc, options: NormalizeOptions) {
     // 파싱은 다시 하지 않는다. rawText 를 들고 있으므로 정규화만 다시 돌린다.
@@ -57,13 +74,13 @@ const api: WorkerApi = {
     return { ...doc, blocks };
   },
 
-  async diff(a: NormalizedDoc, b: NormalizedDoc, options: DiffOptions): Promise<DiffResult> {
+  diff: keepErrorCode(async (a: NormalizedDoc, b: NormalizedDoc, options: DiffOptions): Promise<DiffResult> => {
     if (a.confidence === 0 || b.confidence === 0) {
       const bad = a.confidence === 0 ? a : b;
       throw new AppError('GARBLED_TEXT', bad.meta.fileName);
     }
     return diffDocs(a, b, options);
-  },
+  }),
 };
 
 Comlink.expose(api);

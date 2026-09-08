@@ -37,6 +37,7 @@
     "src",
     "tests",
     "vite.config.ts",
-    "scripts/inspect.ts"
+    "scripts/inspect.ts",
+    "playwright.config.ts"
   ]
 }

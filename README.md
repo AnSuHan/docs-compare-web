@@ -11,6 +11,7 @@ npm install
 npm run dev        # 개발 서버
 npm run verify     # 전송검사 + 테스트 + 빌드 + 번들예산. CI 가 도는 것과 같다
 npm run inspect    # src/fixtures/private 의 실문서를 파서에 통과시켜 본다
+npm run test:e2e   # Playwright 7개 시나리오 (dev 서버를 알아서 띄운다)
 ```
 
 ## 지금 되는 것
@@ -31,7 +32,7 @@ UI: Unified/Split, 변경 요약, 변경점 점프, 미니맵, 동일 구간 접
 토글(재파싱 없음), 뷰어 모드, 단축키, 암호 PDF 비밀번호 입력(T-040 — 비밀번호도
 브라우저 밖으로 나가지 않는다).
 
-테스트 163개, 초기 로드 70.6KB (예산 200KB).
+단위 테스트 166개 + E2E 7개, 초기 로드 70.6KB (예산 200KB).
 
 > **아직 실문서를 통과시켜 본 적이 없다.** 단위 테스트의 입력은 전부 합성
 > 데이터다. 무엇이 남았고 왜 그것이 1번인지는 `docs/NEXT.md` 를 본다.
@@ -93,6 +94,10 @@ src/
 - **파일 바이트를 네트워크로 보내지 않는다.** `npm run lint:no-upload` 가 강제한다.
 - **형식별 파서는 반드시 동적 import.** 정적으로 넣으면 번들 예산 검사가 실패한다.
 - **정규화 옵션을 바꿔도 재파싱하지 않는다.** `rawText` 를 들고 있으므로 `renormalize` 만 돈다.
+- **워커에서 던지는 에러는 `toJSON()` 으로 바꿔 던진다.** Comlink 가 Error 서브클래스를
+  message/name/stack 으로만 넘겨서, 그냥 던지면 `code` 가 사라진다.
+- **테스트용 문서는 코드로 만든다.** 저장소에 바이너리 픽스처를 두지 않는다
+  (`tests/helpers/makeDocs.ts`, `tests/helpers/encryptedPdf.ts`).
 
 ## 다음
 
