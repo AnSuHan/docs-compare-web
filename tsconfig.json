@@ -36,6 +36,7 @@
   "include": [
     "src",
     "tests",
-    "vite.config.ts"
+    "vite.config.ts",
+    "scripts/inspect.ts"
   ]
 }
