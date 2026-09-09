@@ -10,3 +10,4 @@ src/fixtures/private
 tests/e2e/.fixtures
 test-results
 playwright-report
+tests/shots/.samples

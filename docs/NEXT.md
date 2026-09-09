@@ -240,6 +240,13 @@ npm run deploy:record
 자세한 내용과 이 구성에 얽힌 함정 세 가지(마운트 경로, `preview.allowedHosts`,
 빌드 도구를 `dependencies` 에 두는 이유)는 `README.md` 의 배포 절 참고.
 
+### README 화면 이미지
+
+`npm run docs:shots` 로 다시 찍는다. 표본 계약서(`tests/shots/samples.ts`)를 코드로
+만들어 실제 앱에 올리고 [세 칸]/[한 줄로]/[나란히] 를 각각 캡처해 `docs/images/` 에
+넣는다. 기본 E2E 와 분리해 뒀다 — 검사는 매번 돌아야 하고, 캡처는 화면이 바뀌었을
+때만 돌리면 된다(매 실행마다 PNG 가 새로 써지면 git 이 시끄러워진다).
+
 ### 이 프로젝트에서 이미 밟은 지뢰
 
 같은 실수를 반복하지 않도록 남긴다.

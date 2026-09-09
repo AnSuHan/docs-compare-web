@@ -100,7 +100,8 @@ export const useApp = create<AppState>((set, get) => ({
   error: null,
   busy: false,
   normalizeOptions: DEFAULT_NORMALIZE.text,
-  view: 'unified',
+  // 기본은 세 칸. 공통과 차이를 한 화면에서 가르는 것이 이 도구의 기본 읽기 방식이다.
+  view: 'triple',
   cursor: -1,
   passwords: {},
   passwordAsk: null,

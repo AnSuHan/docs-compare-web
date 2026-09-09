@@ -24,12 +24,15 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'DocDiff' })).toBeVisible();
 });
 
-test('1. TXT 두 개 → 비교 → 변경점 점프', async ({ page }) => {
+test('1. TXT 두 개 → 한 줄로 비교 → 변경점 점프', async ({ page }) => {
   await upload(page, F.txtBefore, F.txtAfter);
   await compare(page).click();
 
   // 요약이 떴다 = diff 가 끝났다.
   await expect(page.getByTitle('좌우 바꾸기')).toBeVisible();
+
+  // 기본은 세 칸이다. 이 시나리오는 한 줄로 보기를 확인한다.
+  await page.getByRole('button', { name: '한 줄로' }).click();
   await expect(page.getByText('두 문서가 같습니다.')).toHaveCount(0);
 
   // 이 제품의 핵심 화면 — 어절 통째가 아니라 조사 한 글자만 강조되어야 한다.
@@ -138,7 +141,7 @@ test('8. 세 칸 보기 — 가운데는 공통, 좌우는 각자만', async ({ 
   await compare(page).click();
   await expect(page.getByTitle('좌우 바꾸기')).toBeVisible();
 
-  await page.getByRole('button', { name: '세 칸' }).click();
+  // 아무것도 누르지 않아도 세 칸으로 열린다 — 이게 기본 보기다.
   await expect(page.getByRole('button', { name: '세 칸' })).toHaveAttribute('aria-pressed', 'true');
 
   // 열 머리가 어느 칸이 어느 문서인지 말해 준다.

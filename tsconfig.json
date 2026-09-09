@@ -38,6 +38,7 @@
     "tests",
     "vite.config.ts",
     "scripts/inspect.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "playwright.shots.config.ts"
   ]
 }

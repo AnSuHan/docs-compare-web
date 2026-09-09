@@ -86,14 +86,8 @@ function Cell({ text, tone, label }: { text?: string; tone?: 'del' | 'add'; labe
       className={['min-w-0 whitespace-pre-wrap break-words px-3 py-2 text-[15px] leading-relaxed', bg].join(' ')}
       aria-label={filled ? label : undefined}
     >
-      {filled ? (
-        text
-      ) : (
-        // 빈 칸도 자리를 지켜야 세 열이 어긋나지 않는다. 무엇도 없다는 뜻은 기호로 남긴다.
-        <span aria-hidden className="text-[var(--color-ink-400)]">
-          ·
-        </span>
-      )}
+      {/* 빈 칸은 비워 둔다. 자리는 격자가 지키므로 기호를 넣으면 화면만 시끄러워진다. */}
+      {text}
     </span>
   );
 }

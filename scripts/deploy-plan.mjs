@@ -55,7 +55,7 @@ const EXCLUDE = [
    * 올리면 서버에서 "모듈을 찾을 수 없다" 로 빌드가 통째로 깨진다.
    * (tests/ 를 빼는 이유도 같다 — vitest 가 devDependency 다.)
    */
-  /^playwright\.config\.ts$/,
+  /^playwright\..*config\.ts$/, // playwright.config.ts + playwright.shots.config.ts
   /\.tsbuildinfo$/,
 ];
 
