@@ -1,10 +1,10 @@
 {
   "app": "docdiff",
-  "updatedAt": "2026-09-09T10:57:37.201Z",
+  "updatedAt": "2026-09-09T11:08:20.944Z",
   "note": "마지막으로 배포한 파일들의 해시. scripts/deploy-plan.mjs 가 읽고 쓴다.",
   "files": {
     "index.html": "f08fdb4658f2910e",
-    "package.json": "6b6eedc562fe7172",
+    "package.json": "23b1bed7446716ed",
     "scripts/check-bundle.mjs": "7c526debfb235339",
     "scripts/check-no-upload.mjs": "3845cf327c711f6a",
     "server/static.mjs": "8e1853f90b855c5a",
@@ -21,7 +21,7 @@
     "src/components/diff/Minimap.tsx": "709444a87cd2b742",
     "src/components/diff/OptionToggles.tsx": "4318e65116767880",
     "src/components/diff/SummaryBar.tsx": "6fd17e1e8a2e570e",
-    "src/components/diff/TripleRow.tsx": "339872bac75d2d08",
+    "src/components/diff/TripleRow.tsx": "c44a213011fe7ca5",
     "src/components/diff/rows.ts": "c79069cf8ebc26c3",
     "src/components/diff/tripleRows.ts": "d454371cd31cf846",
     "src/components/upload/FileSlot.tsx": "ad717dd365195ff4",
@@ -68,11 +68,11 @@
     "src/spikes/hwp/probe.ts": "778c6ff93adbcea8",
     "src/spikes/kordoc/probe.ts": "4a678268a967293e",
     "src/spikes/pdf/probe.ts": "43bfc856b2a100c3",
-    "src/store/index.ts": "005df022596f34ae",
+    "src/store/index.ts": "2f95b813093af466",
     "src/workers/client.ts": "e0a592bdc32606a2",
     "src/workers/document.worker.ts": "f52a517135daa6c9",
     "src/workers/protocol.ts": "4aa002e8605f4103",
-    "tsconfig.json": "b8e34278c9e3b2a8",
+    "tsconfig.json": "67961a6e8a942e5f",
     "vite.config.ts": "e9c94e17ff7a4164"
   }
 }
