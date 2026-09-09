@@ -68,26 +68,65 @@ function SegmentLine({ seg, loc }: { seg: TripleSegment; loc: string }) {
         </>
       ) : (
         <>
-          <Cell text={seg.left} tone="del" label="이전에만 있음" />
+          <Cell text={seg.left} before={seg.before} after={seg.after} tone="del" label="이전에만 있음" />
           <Cell />
-          <Cell text={seg.right} tone="add" label="이후에만 있음" />
+          <Cell text={seg.right} before={seg.before} after={seg.after} tone="add" label="이후에만 있음" />
         </>
       )}
     </div>
   );
 }
 
-function Cell({ text, tone, label }: { text?: string; tone?: 'del' | 'add'; label?: string }) {
+function Cell({
+  text,
+  before,
+  after,
+  tone,
+  label,
+}: {
+  text?: string;
+  /** 조각이 너무 짧을 때 붙는 읽기 보조. diff 결과가 아니므로 흐리게, 낭독기에는 숨긴다. */
+  before?: string;
+  after?: string;
+  tone?: 'del' | 'add';
+  label?: string;
+}) {
   const filled = !!text;
-  const bg = !filled ? '' : tone === 'del' ? 'bg-[var(--color-del-bg)]' : tone === 'add' ? 'bg-[var(--color-add-bg)]' : '';
+  const muted = 'text-[var(--color-ink-400)]';
+
+  /*
+    맥락을 붙인 짧은 조각은 흐린 글자들 사이에 한두 자만 놓인다. 옅은 배경으로는
+    묻혀 버려서, 인라인 강조와 같은 진한 색을 쓴다. 문단을 통째로 옮긴 경우엔
+    반대로 옅은 배경이어야 한다 — 화면 절반이 색으로 덮이면 읽을 수 없다.
+  */
+  const strong = !!(before || after);
+  const tint =
+    tone === 'del'
+      ? strong
+        ? 'bg-[var(--color-del-strong)] text-[var(--color-ink-900)]'
+        : 'bg-[var(--color-del-bg)]'
+      : tone === 'add'
+        ? strong
+          ? 'bg-[var(--color-add-strong)] text-[var(--color-ink-900)]'
+          : 'bg-[var(--color-add-bg)]'
+        : '';
 
   return (
+    // dir=auto + isolate: 아랍어·히브리어 조각을 문맥에서 떼어 놓아도 순서가 뒤집히지 않는다.
     <span
-      className={['min-w-0 whitespace-pre-wrap break-words px-3 py-2 text-[15px] leading-relaxed', bg].join(' ')}
-      aria-label={filled ? label : undefined}
+      dir="auto"
+      className={[
+        'min-w-0 whitespace-pre-wrap break-words px-3 py-2 text-[15px] leading-relaxed [unicode-bidi:isolate]',
+      ].join(' ')}
     >
       {/* 빈 칸은 비워 둔다. 자리는 격자가 지키므로 기호를 넣으면 화면만 시끄러워진다. */}
-      {text}
+      {filled && before && <span aria-hidden className={muted}>{before}</span>}
+      {filled && (
+        <span aria-label={label} className={[tint, '[unicode-bidi:isolate]'].join(' ')}>
+          {text}
+        </span>
+      )}
+      {filled && after && <span aria-hidden className={muted}>{after}</span>}
     </span>
   );
 }

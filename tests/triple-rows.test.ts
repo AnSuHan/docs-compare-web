@@ -53,9 +53,46 @@ describe('toTripleSegments', () => {
 
     expect(toTripleSegments(row, 1)).toEqual([
       { kind: 'common', id: '1:0', text: '이 규정은 계약서' },
-      { kind: 'divergent', id: '1:1', left: '를', right: '는' },
+      // 한 글자짜리 조각은 그것만 떼어 놓으면 무엇이 바뀐 건지 알 수 없다.
+      // 앞뒤 맥락이 붙되, 조각 자체(left/right)는 그대로다.
+      { kind: 'divergent', id: '1:1', left: '를', right: '는', before: '이 규정은 계약서', after: ' 비교한다.' },
       { kind: 'common', id: '1:2', text: ' 비교한다.' },
     ]);
+  });
+
+  it('긴 조각에는 맥락을 붙이지 않는다 — 그 자체로 읽힌다', () => {
+    const row: DiffRow = {
+      kind: 'modify',
+      left: block('계약 기간은 1년으로 한다.'),
+      right: block('계약 기간은 열두 달로 한다.'),
+      inline: [
+        span('equal', '계약 기간은 '),
+        span('delete', '1년으로'),
+        span('insert', '열두 달로'),
+        span('equal', ' 한다.'),
+      ],
+    };
+
+    const segs = toTripleSegments(row, 0);
+    expect(segs[1]).toEqual({ kind: 'divergent', id: '0:1', left: '1년으로', right: '열두 달로' });
+  });
+
+  it('맥락이 잘리면 말줄임을 붙인다', () => {
+    const row: DiffRow = {
+      kind: 'modify',
+      left: block('가나다라마바사아자차카타파하 1 끝'),
+      right: block('가나다라마바사아자차카타파하 2 끝'),
+      inline: [
+        span('equal', '가나다라마바사아자차카타파하 '),
+        span('delete', '1'),
+        span('insert', '2'),
+        span('equal', ' 끝'),
+      ],
+    };
+
+    const seg = toTripleSegments(row, 0)[1];
+    expect(seg?.kind).toBe('divergent');
+    expect(seg && 'before' in seg && seg.before?.startsWith('…')).toBe(true);
   });
 
   it('연속된 같은 성격의 스팬은 한 조각으로 모은다', () => {

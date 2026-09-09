@@ -1,6 +1,7 @@
 import type { InlineSpan } from '../types';
 import { diffSequence, type SeqOp } from './sequence';
 import { diceCoefficient } from './pairing';
+import { graphemes } from '../segment';
 
 /**
  * §5.4 3단계 — 한국어 대응 인라인 diff.
@@ -19,8 +20,12 @@ export function splitWords(s: string): string[] {
   return s.match(/\s+|[^\s]+/g) ?? [];
 }
 
+/**
+ * 자소 단위로 쪼갠다. 코드포인트로 쪼개면 이모지 조합·결합 문자·NFD 자모가
+ * 반쪽으로 갈려 글자가 깨진 채 화면에 남는다.
+ */
 function splitChars(s: string): string[] {
-  return [...s];
+  return graphemes(s);
 }
 
 function toSpans(tokens: readonly string[], other: readonly string[], ops: SeqOp[]): InlineSpan[] {
