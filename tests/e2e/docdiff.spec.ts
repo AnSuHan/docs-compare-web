@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { F, LOCKED_PASSWORD, fixture } from './fixtures';
 
 /**
- * T-073 / §13.4 — 6개 시나리오 + 암호 PDF(T-040).
+ * T-073 / §13.4 — 6개 시나리오 + 암호 PDF(T-040) + 세 칸 보기.
  *
  * 여기까지가 "배포할 때마다 사람이 눌러 보던 것"이다. 화면 문구를 그대로
  * 확인한다 — 사용자가 읽는 문장이 바뀌면 테스트도 같이 바뀌어야 한다.
@@ -131,4 +131,25 @@ test('7. 암호 PDF → 비밀번호 모달 → 비교 (T-040)', async ({ page }
 
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText('두 문서가 같습니다.')).toBeVisible();
+});
+
+test('8. 세 칸 보기 — 가운데는 공통, 좌우는 각자만', async ({ page }) => {
+  await upload(page, F.txtBefore, F.txtAfter);
+  await compare(page).click();
+  await expect(page.getByTitle('좌우 바꾸기')).toBeVisible();
+
+  await page.getByRole('button', { name: '세 칸' }).click();
+  await expect(page.getByRole('button', { name: '세 칸' })).toHaveAttribute('aria-pressed', 'true');
+
+  // 열 머리가 어느 칸이 어느 문서인지 말해 준다.
+  await expect(page.getByText('공통', { exact: true }).first()).toBeVisible();
+
+  // "이 규정은 계약서를/는 비교한다." 가 공통 → 갈림 → 공통 으로 펼쳐진다.
+  await expect(page.getByLabel('공통').filter({ hasText: '이 규정은 계약서' })).toBeVisible();
+  await expect(page.getByLabel('이전에만 있음').filter({ hasText: '를' })).toBeVisible();
+  await expect(page.getByLabel('이후에만 있음').filter({ hasText: '는' })).toBeVisible();
+
+  // 좌우 칸에는 상대편 글자가 섞이지 않는다 — 이게 "각자만" 의 뜻이다.
+  await expect(page.getByLabel('이전에만 있음').filter({ hasText: '를' })).toHaveText('를');
+  await expect(page.getByLabel('이후에만 있음').filter({ hasText: '는' })).toHaveText('는');
 });

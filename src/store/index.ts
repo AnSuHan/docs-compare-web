@@ -9,7 +9,8 @@ import { AppError } from '@/core/errors';
 import { parseFile, renormalize, runDiff, terminateWorker } from '@/workers/client';
 
 type Slot = 0 | 1;
-export type ViewMode = 'split' | 'unified';
+/** 'triple' = 세 칸 보기(왼쪽만 / 공통 / 오른쪽만). 가운데는 나중에 편집 대상이 된다. */
+export type ViewMode = 'split' | 'unified' | 'triple';
 
 /**
  * T-040 — 암호가 걸린 문서를 다시 열 때 쓰는 비밀번호를 파일별로 들고 있는다.

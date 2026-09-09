@@ -4,6 +4,7 @@ import type { DiffResult } from '@/core/types';
 import type { ViewMode } from '@/store';
 import { DiffRowView, locationOf } from './DiffRowView';
 import { CollapsedGap } from './CollapsedGap';
+import { TripleHeader, TripleRow } from './TripleRow';
 import { buildViewItems, findViewIndex } from './rows';
 
 /**
@@ -20,11 +21,14 @@ export function DiffView({
   view,
   cursor,
   collapse,
+  names,
 }: {
   diff: DiffResult;
   view: ViewMode;
   cursor: number;
   collapse: boolean;
+  /** 세 칸 보기의 열 머리에 쓴다. 어느 칸이 어느 문서인지 알려면 이름이 필요하다. */
+  names?: [string, string];
 }) {
   const parent = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
@@ -60,6 +64,7 @@ export function DiffView({
       className="h-[65vh] overflow-auto rounded-lg border border-[var(--color-ink-200)]"
       tabIndex={0}
     >
+      {view === 'triple' && names && <TripleHeader names={names} />}
       <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
         {virtualizer.getVirtualItems().map((v) => {
           const item = items[v.index]!;
@@ -74,6 +79,12 @@ export function DiffView({
                 <CollapsedGap count={item.count} onExpand={() => setExpanded((s) => new Set(s).add(item.runStart))} />
               ) : view === 'split' ? (
                 <SplitRow diff={diff} index={item.index} focused={item.index === currentRow} />
+              ) : view === 'triple' ? (
+                <TripleRow
+                  row={diff.rows[item.index]!}
+                  index={item.index}
+                  focused={item.index === currentRow}
+                />
               ) : (
                 <UnifiedRow diff={diff} index={item.index} focused={item.index === currentRow} />
               )}

@@ -52,7 +52,7 @@ export function useShortcuts(handlers: ShortcutHandlers, enabled = true): void {
 const HELP: Array<[string, string]> = [
   ['n / j', '다음 변경점'],
   ['p / k', '이전 변경점'],
-  ['s', '나란히 ↔ 한 줄로'],
+  ['s', '보기 바꾸기 (한 줄로 → 나란히 → 세 칸)'],
   ['w', '공백 무시 토글'],
   ['Esc', '처리 취소 / 닫기'],
   ['?', '이 도움말'],

@@ -60,6 +60,15 @@ test('비교 결과 — 나란히', async ({ page }) => {
   expect(await audit(page)).toEqual([]);
 });
 
+test('비교 결과 — 세 칸', async ({ page }) => {
+  await upload(page, F.txtBefore, F.txtAfter);
+  await page.getByRole('button', { name: '비교하기' }).click();
+  await page.getByRole('button', { name: '세 칸' }).click();
+  await expect(page.getByRole('button', { name: '세 칸' })).toHaveAttribute('aria-pressed', 'true');
+
+  expect(await audit(page)).toEqual([]);
+});
+
 test('뷰어 분할', async ({ page }) => {
   await upload(page, F.pdfSmall, F.docxBefore);
   await expect(page.getByLabel('1 쪽')).toBeVisible();
@@ -158,9 +167,13 @@ test('키보드만으로 비교하고 변경점을 옮겨 다닌다', async ({ p
   await page.keyboard.press('p');
   await expect(page.getByText(/^1 \/ \d+$/)).toBeVisible(); // 첫 변경점에서 더 못 올라간다
 
-  // s 로 나란히, ? 로 도움말, Esc 로 닫기.
+  // s 로 보기를 돌린다: 한 줄로 → 나란히 → 세 칸.
   await page.keyboard.press('s');
   await expect(page.getByRole('button', { name: '나란히' })).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('s');
+  await expect(page.getByRole('button', { name: '세 칸' })).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('s');
+  await expect(page.getByRole('button', { name: '한 줄로' })).toHaveAttribute('aria-pressed', 'true');
 
   await page.keyboard.press('?');
   await expect(page.getByRole('dialog', { name: '단축키' })).toBeVisible();

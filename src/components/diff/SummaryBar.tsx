@@ -1,6 +1,12 @@
 import type { DiffResult } from '@/core/types';
 import type { ViewMode } from '@/store';
 
+const VIEW_LABEL: Record<ViewMode, string> = {
+  split: '나란히',
+  unified: '한 줄로',
+  triple: '세 칸',
+};
+
 /**
  * §9.2 상단 바 — 무엇이 얼마나 바뀌었고, 지금 몇 번째를 보고 있는가.
  * F-04(변경 요약) + F-05(변경점 점프) + Split/Unified 전환.
@@ -46,7 +52,7 @@ export function SummaryBar({
 
         {canSplit && (
           <div className="ml-auto flex overflow-hidden rounded border border-[var(--color-ink-200)]">
-            {(['split', 'unified'] as const).map((v) => (
+            {(['split', 'unified', 'triple'] as const).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -57,7 +63,7 @@ export function SummaryBar({
                   (view === v ? 'bg-[var(--color-ink-100)] font-medium' : 'text-[var(--color-ink-400)]')
                 }
               >
-                {v === 'split' ? '나란히' : '한 줄로'}
+                {VIEW_LABEL[v]}
               </button>
             ))}
           </div>

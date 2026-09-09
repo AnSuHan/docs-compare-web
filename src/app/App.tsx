@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { fileKey, useApp } from '@/store';
+import { fileKey, useApp, type ViewMode } from '@/store';
 import { FileSlot } from '@/components/upload/FileSlot';
 import { DiffView } from '@/components/diff/DiffView';
 import { SummaryBar } from '@/components/diff/SummaryBar';
@@ -11,6 +11,14 @@ import { ViewerSplit } from '@/components/viewer/ViewerSplit';
 import { PasswordPrompt } from '@/components/common/PasswordPrompt';
 import { ping } from '@/workers/client';
 import { navigate } from './routes';
+
+/** 보기 순환 순서. 한 줄로 → 나란히 → 세 칸. */
+const VIEW_CYCLE = ['unified', 'split', 'triple'] as const;
+
+function nextView(v: ViewMode): ViewMode {
+  const i = VIEW_CYCLE.indexOf(v as (typeof VIEW_CYCLE)[number]);
+  return VIEW_CYCLE[(i + 1) % VIEW_CYCLE.length]!;
+}
 
 /** §9.6 — 좁은 화면에서는 Split 을 강제로 끈다. 양쪽 다 못 읽는다. */
 function useWideScreen(): boolean {
@@ -50,7 +58,8 @@ export default function App() {
     () => ({
       next,
       prev,
-      toggleView: () => setView(view === 'split' ? 'unified' : 'split'),
+      // s 로 세 보기를 돌린다. 좁은 화면에서는 어차피 한 줄로만 그린다.
+      toggleView: () => setView(nextView(view)),
       toggleWhitespace: () => void setOption('ignoreWhitespace', !normalizeOptions.ignoreWhitespace),
       escape: () => {
         if (helpOpen) setHelpOpen(false);
@@ -181,7 +190,7 @@ export default function App() {
           <EdgeNotes files={files} docs={docs} diff={diff} />
           <div className="flex gap-2">
             <div className="min-w-0 flex-1">
-              <DiffView diff={diff} view={effectiveView} cursor={cursor} collapse />
+              <DiffView diff={diff} view={effectiveView} cursor={cursor} collapse names={names} />
             </div>
             <Minimap diff={diff} cursor={cursor} onPick={setCursor} />
           </div>
